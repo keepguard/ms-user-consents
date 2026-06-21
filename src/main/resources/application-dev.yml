@@ -1,0 +1,26 @@
+server:
+  port: 8086
+
+spring:
+  data:
+    redis:
+      cluster:
+        nodes: redis-node-1:7000,redis-node-2:7001,redis-node-3:7002,redis-node-4:7003,redis-node-5:7004,redis-node-6:7005
+        max-redirects: 3
+      password: ""
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: -1ms
+        cluster:
+          refresh:
+            adaptive: true
+            period: 30s
+
+storage:
+  minio:
+    endpoint: http://minio:9000
+

@@ -1,0 +1,123 @@
+<configuration>
+    <!-- Configuração de propriedades para campos estruturados -->
+    <property name="SERVICE_NAME" value="ms-user-consents"/>
+    
+    <!-- Appender para JSON (produção) -->
+    <appender name="STDOUT_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>{"timestamp":"%d{ISO8601}","level":"%level","logger":"%logger","message":"%message","service":"${SERVICE_NAME}","correlationId":"%X{correlationId:-}","userId":"%X{userId:-}","action":"%X{action:-}","entityType":"%X{entityType:-}","entityId":"%X{entityId:-}","durationMs":"%X{durationMs:-}","operation":"%X{operation:-}","errorCode":"%X{errorCode:-}","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","consentDocumentId":"%X{consentDocumentId:-}","consentType":"%X{consentType:-}","complianceStatus":"%X{complianceStatus:-}"}</pattern>
+        </encoder>
+    </appender>
+    
+    <!-- Appender para formato legível (desenvolvimento) -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) %X{correlationId:- CorrelationId: %X{correlationId}} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    
+    <!-- Appender para Logstash (produção) -->
+    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>${logging.logstash.host:-localhost}:${logging.logstash.port:-5000}</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"service":"${SERVICE_NAME}"}</customFields>
+        </encoder>
+        <!-- Configuração de reconexão -->
+        <reconnectionDelay>1 second</reconnectionDelay>
+        <keepAliveDuration>5 minutes</keepAliveDuration>
+    </appender>
+    
+    <!-- Logger específico para auditoria -->
+    <logger name="AUDIT" level="INFO" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    
+    <!-- Configuração para ambientes local e test (apenas console) -->
+    <springProfile name="local,test">
+        <root level="INFO">
+            <appender-ref ref="STDOUT"/>
+        </root>
+        
+        <!-- Loggers específicos para reduzir ruído -->
+        <logger name="com.keepguard.ms_user_consents" level="INFO"/>
+        <logger name="org.springframework.web" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="org.springframework.data.jpa" level="WARN"/>
+        <logger name="org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver" level="WARN"/>
+
+        <!-- Remover completamente logs técnicos para manter apenas operações lógicas -->
+        <logger name="com.keepguard.lib_common.logging.service.LoggingService" level="OFF"/>
+        <logger name="com.keepguard.lib_common.metrics.aspect.MetricsAspect" level="OFF"/>
+        <logger name="com.keepguard.lib_common.logging.StructuredLogger" level="OFF"/>
+        
+        <!-- Remover logs do CorrelationIdFilter completamente -->
+        <logger name="com.keepguard.ms_user_consents.infrastructure.filter.CorrelationIdFilter" level="OFF"/>
+    </springProfile>
+    
+    <!-- Configuração para ambiente dev (formato legível) -->
+    <springProfile name="dev">
+        <root level="INFO">
+            <appender-ref ref="STDOUT"/>
+        </root>
+        
+        <!-- Loggers específicos para desenvolvimento -->
+        <logger name="com.keepguard.ms_user_consents" level="INFO"/>
+        <logger name="org.springframework.web" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="org.springframework.data.jpa" level="WARN"/>
+        <logger name="org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver" level="WARN"/>
+        <logger name="org.springframework.boot.autoconfigure" level="WARN"/>
+        
+        <!-- Remover logs técnicos para manter apenas operações de negócio -->
+        <logger name="com.keepguard.lib_common.logging.service.LoggingService" level="OFF"/>
+        <logger name="com.keepguard.lib_common.metrics.aspect.MetricsAspect" level="OFF"/>
+        <logger name="com.keepguard.lib_common.logging.StructuredLogger" level="OFF"/>
+        
+        <!-- Habilitar logs do CorrelationIdFilter -->
+        <logger name="com.keepguard.ms_user_consents.infrastructure.filter.CorrelationIdFilter" level="INFO"/>
+    </springProfile>
+    
+    <!-- Configuração para ambiente prod (formato JSON para Logstash) -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="STDOUT_JSON"/>
+            <appender-ref ref="LOGSTASH"/>
+        </root>
+        
+        <!-- Loggers específicos para produção -->
+        <logger name="com.keepguard.ms_user_consents" level="INFO"/>
+        <logger name="org.springframework.web" level="WARN"/>
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="org.springframework.data.jpa" level="WARN"/>
+        <logger name="org.springframework.boot.autoconfigure" level="WARN"/>
+        <logger name="org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver" level="WARN"/>
+        
+        <!-- Remover logs técnicos -->
+        <logger name="com.keepguard.lib_common.logging.service.LoggingService" level="OFF"/>
+        <logger name="com.keepguard.lib_common.metrics.aspect.MetricsAspect" level="OFF"/>
+        <logger name="com.keepguard.lib_common.logging.StructuredLogger" level="OFF"/>
+        
+        <!-- Habilitar logs do CorrelationIdFilter -->
+        <logger name="com.keepguard.ms_user_consents.infrastructure.filter.CorrelationIdFilter" level="INFO"/>
+        
+        <!-- Suprime warnings do Logstash quando não conseguir conectar -->
+        <logger name="net.logstash.logback.appender.LogstashTcpSocketAppender" level="ERROR"/>
+        
+        <!-- Suprimir logs redundantes de outras bibliotecas -->
+        <logger name="org.springframework.security" level="WARN"/>
+        <logger name="org.springframework.boot.actuate" level="WARN"/>
+        <logger name="org.springframework.boot.autoconfigure.web.servlet" level="WARN"/>
+        <logger name="org.springframework.context.support" level="WARN"/>
+        <logger name="org.springframework.boot.context.embedded" level="WARN"/>
+        <logger name="com.zaxxer.hikari" level="WARN"/>
+        <logger name="org.hibernate.SQL" level="WARN"/>
+        <logger name="org.hibernate.type.descriptor.sql" level="WARN"/>
+    </springProfile>
+    
+    <!-- Configuração padrão (fallback) -->
+    <springProfile name="!local,!test,!dev,!prod">
+        <root level="INFO">
+            <appender-ref ref="STDOUT"/>
+        </root>
+    </springProfile>
+</configuration>

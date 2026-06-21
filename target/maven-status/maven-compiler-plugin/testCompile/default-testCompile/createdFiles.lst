@@ -1,0 +1,13 @@
+com/keepguard/ms_user_consents/infrastructure/redis/UserConsentCacheServiceTest.class
+com/keepguard/ms_user_consents/application/service/UserConsentCommandServiceTest.class
+com/keepguard/ms_user_consents/application/service/UserConsentUseCaseServiceTest.class
+com/keepguard/ms_user_consents/MsUserConsentsApplicationTest.class
+com/keepguard/ms_user_consents/application/service/ConsentDocumentCommandServiceTest.class
+com/keepguard/ms_user_consents/application/service/ConsentDocumentQueryServiceTest.class
+com/keepguard/ms_user_consents/infrastructure/redis/ConsentDocumentCacheServiceTest.class
+com/keepguard/ms_user_consents/application/service/UserConsentQueryServiceTest.class
+com/keepguard/ms_user_consents/domain/entity/UserConsentTest.class
+com/keepguard/ms_user_consents/application/service/ComplianceQueryServiceTest.class
+com/keepguard/ms_user_consents/adapters/in/rest/consentDocument/ConsentDocumentControllerTest.class
+com/keepguard/ms_user_consents/adapters/in/rest/userConsent/UserConsentControllerTest.class
+com/keepguard/ms_user_consents/domain/entity/ConsentDocumentTest.class

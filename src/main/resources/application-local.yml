@@ -1,0 +1,20 @@
+server:
+  port: 8586
+
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6380
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: -1ms
+
+storage:
+  minio:
+    endpoint: http://localhost:9000
+

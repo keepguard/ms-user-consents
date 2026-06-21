@@ -1,0 +1,138 @@
+server:
+  port: 8086
+
+spring:
+  profiles:
+    active: local
+  application:
+    name: ms-user-consents
+  datasource:
+    url: jdbc:postgresql://postgres:5432/keepguard_api_db
+    username: keepguard_api_user
+    password: keepguard_api_pass
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+  data:
+    redis:
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: -1ms
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        default_schema: ms_user_consents
+  jackson:
+    serialization:
+      INDENT_OUTPUT: true
+    deserialization:
+      ADJUST_DATES_TO_CONTEXT_TIME_ZONE: false
+      FAIL_ON_UNKNOWN_PROPERTIES: false
+    time-zone: UTC
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# Configurações de Storage MinIO/S3
+storage:
+  minio:
+    endpoint: http://localhost:9000
+    access-key: keepguard_admin
+    secret-key: keepguard_minio_2025_secure
+    bucket:
+      consents: keepguard-consents
+      avatars: keepguard-avatars
+    paths:
+      drafts: "drafts"
+      published: "published"
+      archived: "archived"
+
+# Configurações de Cache (TTL em segundos)
+cache:
+  redis:
+    ttl:
+      consent_document: 86400     # 24 horas
+      user_consent: 3600          # 1 hora
+      compliance: 3600            # 1 hora
+    prefix:
+      consent_document: "consent_doc_cache"
+      user_consent: "user_consent_cache"
+      compliance: "compliance_cache"
+
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.springframework.data.redis: WARN
+    com.keepguard: INFO
+  logstash:
+    host: ${LOGGING_LOGSTASH_HOST:localhost}
+    port: ${LOGGING_LOGSTASH_PORT:5000}
+    enabled: ${LOGGING_LOGSTASH_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  health:
+    circuitbreakers:
+      enabled: true
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 60s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slowCallDurationThreshold: 5000ms
+        slowCallRateThreshold: 50
+    instances:
+      redisCache:
+        baseConfig: default
+        registerHealthIndicator: true
+        
+  retry:
+    configs:
+      default:
+        maxAttempts: 2
+        waitDuration: 1s
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - java.sql.SQLException
+          - org.springframework.dao.DataAccessException
+          - org.springframework.data.redis.RedisConnectionFailureException
+    instances:
+      redisCache:
+        baseConfig: default
+
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
+
