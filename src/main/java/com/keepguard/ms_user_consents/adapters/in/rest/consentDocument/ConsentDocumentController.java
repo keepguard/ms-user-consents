@@ -52,12 +52,12 @@ public class ConsentDocumentController {
             @RequestParam("createdBy") String createdBy,
             @RequestParam("file") MultipartFile file,
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader
     ) {
-        log.info("POST /api/v1/consent-documents - Type: {}, Title: {}, Application: {}", type, title, xApplication);
+        log.info("POST /api/v1/consent-documents - Type: {}, Title: {}, Application: {}", type, title, tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         try {
             var command = ConsentDocumentCreateCommandDTO.builder()
@@ -75,12 +75,12 @@ public class ConsentDocumentController {
             var response = mapper.toResponseDTO(created);
 
             log.info("Documento criado com sucesso - ID: {}, Type: {}, Application: {}", 
-                    created.getId(), type, xApplication);
+                    created.getId(), type, tenantId);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
         } catch (Exception e) {
-            log.error("Erro ao criar consent document - Application: {}", xApplication, e);
+            log.error("Erro ao criar consent document - Application: {}", tenantId, e);
             throw new RuntimeException("Erro ao criar documento: " + e.getMessage(), e);
         }
     }
@@ -102,17 +102,17 @@ public class ConsentDocumentController {
             @PathVariable UUID consentDocumentId,
             @RequestParam String updatedBy,
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader
     ) {
-        log.info("POST /api/v1/consent-documents/{}/publish - UpdatedBy: {}, Application: {}", consentDocumentId, updatedBy, xApplication);
+        log.info("POST /api/v1/consent-documents/{}/publish - UpdatedBy: {}, Application: {}", consentDocumentId, updatedBy, tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         var published = consentDocumentPort.publish(consentDocumentId, updatedBy);
         var response = mapper.toResponseDTO(published);
 
-        log.info("Documento publicado com sucesso - ID: {}, Application: {}", consentDocumentId, xApplication);
+        log.info("Documento publicado com sucesso - ID: {}, Application: {}", consentDocumentId, tenantId);
 
         return ResponseEntity.ok(response);
     }
@@ -132,17 +132,17 @@ public class ConsentDocumentController {
             @PathVariable UUID consentDocumentId,
             @RequestParam String updatedBy,
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader
     ) {
-        log.info("POST /api/v1/consent-documents/{}/archive - UpdatedBy: {}, Application: {}", consentDocumentId, updatedBy, xApplication);
+        log.info("POST /api/v1/consent-documents/{}/archive - UpdatedBy: {}, Application: {}", consentDocumentId, updatedBy, tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         var archived = consentDocumentPort.archive(consentDocumentId, updatedBy);
         var response = mapper.toResponseDTO(archived);
 
-        log.info("Documento arquivado com sucesso - ID: {}, Application: {}", consentDocumentId, xApplication);
+        log.info("Documento arquivado com sucesso - ID: {}, Application: {}", consentDocumentId, tenantId);
 
         return ResponseEntity.ok(response);
     }
@@ -161,11 +161,11 @@ public class ConsentDocumentController {
     public ResponseEntity<ConsentDocumentResponseDTO> findById(
             @PathVariable UUID id,
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication) {
-        log.info("GET /api/v1/consent-documents/{} - Application: {}", id, xApplication);
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        log.info("GET /api/v1/consent-documents/{} - Application: {}", id, tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         var document = consentDocumentPort.findById(id);
         var response = mapper.toResponseDTO(document);
@@ -186,11 +186,11 @@ public class ConsentDocumentController {
     public ResponseEntity<List<ConsentDocumentResponseDTO>> findByStatus(
             @PathVariable ConsentDocumentStatus status,
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication) {
-        log.info("GET /api/v1/consent-documents/status/{} - Application: {}", status, xApplication);
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        log.info("GET /api/v1/consent-documents/status/{} - Application: {}", status, tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         var documents = consentDocumentPort.findByStatus(status);
         var responses = documents.stream()
@@ -213,11 +213,11 @@ public class ConsentDocumentController {
     public ResponseEntity<List<ConsentDocumentResponseDTO>> findByType(
             @PathVariable ConsentType type,
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication) {
-        log.info("GET /api/v1/consent-documents/type/{} - Application: {}", type, xApplication);
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        log.info("GET /api/v1/consent-documents/type/{} - Application: {}", type, tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         var documents = consentDocumentPort.findByType(type);
         var responses = documents.stream()
@@ -241,11 +241,11 @@ public class ConsentDocumentController {
     public ResponseEntity<ConsentDocumentResponseDTO> findLatestPublishedByType(
             @PathVariable ConsentType type,
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication) {
-        log.info("GET /api/v1/consent-documents/type/{}/latest-published - Application: {}", type, xApplication);
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        log.info("GET /api/v1/consent-documents/type/{}/latest-published - Application: {}", type, tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         var document = consentDocumentPort.findLatestPublishedByType(type);
         var response = mapper.toResponseDTO(document);
@@ -265,11 +265,11 @@ public class ConsentDocumentController {
     })
     public ResponseEntity<List<ConsentDocumentResponseDTO>> findAllPublished(
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication) {
-        log.info("GET /api/v1/consent-documents/published - Application: {}", xApplication);
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        log.info("GET /api/v1/consent-documents/published - Application: {}", tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         var documents = consentDocumentPort.findAllPublished();
         var responses = documents.stream()
@@ -293,15 +293,15 @@ public class ConsentDocumentController {
     public ResponseEntity<Void> delete(
             @PathVariable UUID id,
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication) {
-        log.info("DELETE /api/v1/consent-documents/{} - Application: {}", id, xApplication);
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        log.info("DELETE /api/v1/consent-documents/{} - Application: {}", id, tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         consentDocumentPort.delete(id);
 
-        log.info("Documento deletado com sucesso - ID: {}, Application: {}", id, xApplication);
+        log.info("Documento deletado com sucesso - ID: {}, Application: {}", id, tenantId);
 
         return ResponseEntity.noContent().build();
     }

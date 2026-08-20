@@ -3,10 +3,10 @@
 set -e
 
 SERVICE_NAME="ms-user-consents"
-POM_FILE="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-backend/backend/ms/${SERVICE_NAME}/pom.xml"
-DOCKER_COMPOSE_FILE="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-backend/docker/infra/api/docker-compose.yml"
-DOCKERFILE_PATH="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-backend/backend/ms/${SERVICE_NAME}/Dockerfile"
-TARGET_DIR="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-backend/backend/ms/${SERVICE_NAME}/target"
+POM_FILE="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/backend/ms/${SERVICE_NAME}/pom.xml"
+DOCKER_COMPOSE_FILE="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/docker/infra/api/docker-compose.yml"
+DOCKERFILE_PATH="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/backend/ms/${SERVICE_NAME}/Dockerfile"
+TARGET_DIR="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/backend/ms/${SERVICE_NAME}/target"
 
 # Cores para output
 GREEN='\033[0;32m'
@@ -97,7 +97,7 @@ log_info "============================================"
 
 # 1. Build Maven
 log_info "Executando Maven clean package..."
-cd "/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-backend/backend/ms/${SERVICE_NAME}"
+cd "/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/backend/ms/${SERVICE_NAME}"
 mvn clean package -DskipTests
 
 if [ ! -f "${TARGET_DIR}/${SERVICE_NAME}-${VERSION}.jar" ]; then
@@ -149,7 +149,7 @@ log_success "docker-compose.yml atualizado"
 # 7. Deploy no Docker Compose (se parâmetro "up")
 if [ "$DEPLOY_DOCKER" = true ]; then
     log_info "Fazendo deploy no Docker Compose..."
-    cd "/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-backend/docker/infra/api"
+    cd "/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/docker/infra/api"
     docker-compose up -d ${SERVICE_NAME}
     
     if [ $? -eq 0 ]; then

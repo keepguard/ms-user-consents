@@ -43,11 +43,11 @@ public class ComplianceController {
     public ResponseEntity<ComplianceStatusResponseDTO> checkUserCompliance(
             @PathVariable UUID userId,
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication) {
-        log.info("GET /api/v1/compliance/user/{} - Application: {}", userId, xApplication);
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        log.info("GET /api/v1/compliance/user/{} - Application: {}", userId, tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         var status = compliancePort.checkUserCompliance(userId);
         var response = mapper.toResponseDTO(status);
@@ -69,11 +69,11 @@ public class ComplianceController {
     public ResponseEntity<Boolean> hasMandatoryConsents(
             @PathVariable UUID userId,
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication) {
-        log.info("GET /api/v1/compliance/user/{}/mandatory - Application: {}", userId, xApplication);
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        log.info("GET /api/v1/compliance/user/{}/mandatory - Application: {}", userId, tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         boolean hasMandatory = compliancePort.hasMandatoryConsents(userId);
 
@@ -92,11 +92,11 @@ public class ComplianceController {
     })
     public ResponseEntity<List<ConsentType>> listAllConsentTypes(
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication) {
-        log.info("GET /api/v1/compliance/consent-types - Application: {}", xApplication);
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        log.info("GET /api/v1/compliance/consent-types - Application: {}", tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         var types = compliancePort.listAllConsentTypes();
 
@@ -115,11 +115,11 @@ public class ComplianceController {
     })
     public ResponseEntity<List<ConsentType>> listMandatoryConsentTypes(
             @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Application") String xApplication) {
-        log.info("GET /api/v1/compliance/consent-types/mandatory - Application: {}", xApplication);
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
+        log.info("GET /api/v1/compliance/consent-types/mandatory - Application: {}", tenantIdHeader);
 
-        // Valida o X-Application
-        ValidationUtils.validateXApplication(xApplication);
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
 
         var types = compliancePort.listMandatoryConsentTypes();
 

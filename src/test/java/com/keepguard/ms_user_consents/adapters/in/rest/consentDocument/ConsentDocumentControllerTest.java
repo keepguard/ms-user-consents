@@ -96,7 +96,7 @@ class ConsentDocumentControllerTest {
                         .param("description", "Descrição")
                         .param("type", "TERMS_OF_USE")
                         .param("createdBy", "admin@test.com")
-                        .header("X-Application", "550e8400-e29b-41d4-a716-446655440000"))
+                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.title").value("Termos de Uso"))
@@ -132,7 +132,7 @@ class ConsentDocumentControllerTest {
         // When & Then
         mockMvc.perform(post("/api/v1/consent-documents/{id}/publish", documentId)
                         .param("updatedBy", "admin@test.com")
-                        .header("X-Application", "550e8400-e29b-41d4-a716-446655440000"))
+                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PUBLISHED"));
     }
@@ -166,7 +166,7 @@ class ConsentDocumentControllerTest {
         // When & Then
         mockMvc.perform(post("/api/v1/consent-documents/{id}/archive", documentId)
                         .param("updatedBy", "admin@test.com")
-                        .header("X-Application", "550e8400-e29b-41d4-a716-446655440000"))
+                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ARCHIVED"));
     }
@@ -199,7 +199,7 @@ class ConsentDocumentControllerTest {
 
         // When & Then
         mockMvc.perform(get("/api/v1/consent-documents/{id}", documentId)
-                        .header("X-Application", "550e8400-e29b-41d4-a716-446655440000"))
+                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(documentId.toString()))
                 .andExpect(jsonPath("$.title").value("Termos de Uso"));
@@ -234,7 +234,7 @@ class ConsentDocumentControllerTest {
 
         // When & Then
         mockMvc.perform(get("/api/v1/consent-documents/status/PUBLISHED")
-                        .header("X-Application", "550e8400-e29b-41d4-a716-446655440000"))
+                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].status").value("PUBLISHED"));
@@ -269,7 +269,7 @@ class ConsentDocumentControllerTest {
 
         // When & Then
         mockMvc.perform(get("/api/v1/consent-documents/type/TERMS_OF_USE")
-                        .header("X-Application", "550e8400-e29b-41d4-a716-446655440000"))
+                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].type").value("TERMS_OF_USE"));
@@ -284,7 +284,7 @@ class ConsentDocumentControllerTest {
 
         // When & Then
         mockMvc.perform(delete("/api/v1/consent-documents/{id}", documentId)
-                        .header("X-Application", "550e8400-e29b-41d4-a716-446655440000"))
+                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(status().isNoContent());
     }
 }

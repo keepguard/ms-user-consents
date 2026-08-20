@@ -17,7 +17,7 @@ import java.util.List;
 public class SwaggerConfig {
 
     private static final String SECURITY_SCHEME_NAME = "bearerAuth";
-    private static final String X_APPLICATION_HEADER = "X-Application";
+    private static final String X_APPLICATION_HEADER = "X-Tenant-Id";
 
     @Bean
     public OpenAPI customOpenAPI() {
