@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.3.2</version>
+		<version>3.5.3</version>
 		<relativePath/>
 	</parent>
 	<groupId>com.keepguard</groupId>
@@ -15,8 +15,9 @@
 	<description>User Consents Management Service with MinIO Storage</description>
 	
 	<properties>
-		<java.version>21</java.version>
-		<spring-cloud.version>2023.0.4</spring-cloud.version>
+		<java.version>25</java.version>
+		<spring-cloud.version>2025.0.3</spring-cloud.version>
+		<jacoco.skip>true</jacoco.skip>
 	</properties>
 	
 	<dependencies>
@@ -77,7 +78,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.30</version>
+			<version>1.18.40</version>
 			<scope>provided</scope>
 		</dependency>
 		
@@ -164,6 +165,23 @@
 	
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.13.0</version>
+				<configuration>
+					<source>25</source>
+					<target>25</target>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+			<version>1.18.40</version>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

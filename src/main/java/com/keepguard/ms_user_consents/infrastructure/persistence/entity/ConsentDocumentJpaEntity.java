@@ -21,6 +21,7 @@ public class ConsentDocumentJpaEntity {
     
     @Id
     @Column(name = "id", nullable = false)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(name = "title", nullable = false, length = 255)

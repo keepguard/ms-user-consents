@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.keepguard.ms_user_consents.adapters.in.rest.consentDocument.ConsentDocumentControllerTest
+-------------------------------------------------------------------------------
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.057 s -- in com.keepguard.ms_user_consents.adapters.in.rest.consentDocument.ConsentDocumentControllerTest

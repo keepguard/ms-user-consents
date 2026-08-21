@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.keepguard.ms_user_consents.infrastructure.redis.ConsentDocumentCacheServiceTest
+-------------------------------------------------------------------------------
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.183 s -- in com.keepguard.ms_user_consents.infrastructure.redis.ConsentDocumentCacheServiceTest

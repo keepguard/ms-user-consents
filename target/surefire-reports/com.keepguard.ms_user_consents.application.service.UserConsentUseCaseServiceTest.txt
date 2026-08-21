@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.keepguard.ms_user_consents.application.service.UserConsentUseCaseServiceTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.069 s -- in com.keepguard.ms_user_consents.application.service.UserConsentUseCaseServiceTest

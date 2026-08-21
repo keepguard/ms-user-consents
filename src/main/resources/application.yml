@@ -2,6 +2,12 @@ server:
   port: 8086
 
 spring:
+  threads:
+    virtual:
+      enabled: true
+  cloud:
+    compatibility-verifier:
+      enabled: false
   profiles:
     active: local
   application:
