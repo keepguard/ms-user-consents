@@ -2,6 +2,11 @@ server:
   port: 8586
 
 spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/keepguard_api_db
+    username: keepguard_api_user
+    password: keepguard_api_pass
+    driver-class-name: org.postgresql.Driver
   data:
     redis:
       host: localhost
