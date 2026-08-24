@@ -1,0 +1,19 @@
+# Build artefacts
+target/
+*.jar
+*.war
+*.class
+
+# Backup files
+*.bak
+
+# IDE files
+.idea/
+*.iml
+*.classpath
+*.project
+*.settings/
+
+# OS files
+.DS_Store
+Thumbs.db

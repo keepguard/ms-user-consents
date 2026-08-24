@@ -1,88 +1,115 @@
 #!/bin/bash
 
+# =============================================================================
+# Script de Deploy Automatizado para Microsserviços Java
+# =============================================================================
+# Uso:
+#   ./script-deploy-github-ms-user-consents.sh up             # Incrementa patch no POM + Deploy Docker
+#   ./script-deploy-github-ms-user-consents.sh 1.0.5 up       # Define versão explícita + Deploy Docker
+#   ./script-deploy-github-ms-user-consents.sh                # Incrementa patch no POM + GitHub Registry apenas
+#   ./script-deploy-github-ms-user-consents.sh --current up   # Mantém versão atual do POM + Deploy Docker
+# =============================================================================
+
 set -e
 
 SERVICE_NAME="ms-user-consents"
-POM_FILE="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/backend/ms/${SERVICE_NAME}/pom.xml"
-DOCKER_COMPOSE_FILE="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/docker/infra/api/docker-compose.yml"
-DOCKERFILE_PATH="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/backend/ms/${SERVICE_NAME}/Dockerfile"
-TARGET_DIR="/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/backend/ms/${SERVICE_NAME}/target"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+POM_FILE="${SCRIPT_DIR}/pom.xml"
+DOCKER_COMPOSE_FILE="${PROJECT_ROOT}/docker/docker-compose.yml"
+DOCKERFILE_PATH="${SCRIPT_DIR}/Dockerfile"
+TARGET_DIR="${SCRIPT_DIR}/target"
 
 # Cores para output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
-# Função para logging
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
+log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+log_step() { echo -e "${CYAN}[STEP]${NC} $1"; }
 
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-# Função para extrair versão do POM
+# Extrair versão atual do POM
 get_current_version() {
     grep -A 5 "<artifactId>${SERVICE_NAME}</artifactId>" "$POM_FILE" | grep "<version>" | head -1 | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | xargs
 }
 
-# Função para incrementar versão (patch +1)
+# Incrementar versão patch (+1)
 increment_version() {
     local version=$1
-    local major=$(echo $version | cut -d. -f1)
-    local minor=$(echo $version | cut -d. -f2)
-    local patch=$(echo $version | cut -d. -f3 | cut -d- -f1)
-    local suffix=$(echo $version | cut -d- -f2-)
-    
+    local major=$(echo "$version" | cut -d. -f1)
+    local minor=$(echo "$version" | cut -d. -f2)
+    local patch_part=$(echo "$version" | cut -d. -f3)
+    local patch=$(echo "$patch_part" | cut -d- -f1)
+    local suffix=$(echo "$version" | grep -o -- "-.*" || true)
+
     patch=$((patch + 1))
-    echo "${major}.${minor}.${patch}-${suffix}"
+    if [ -n "$suffix" ]; then
+        echo "${major}.${minor}.${patch}${suffix}"
+    else
+        echo "${major}.${minor}.${patch}"
+    fi
 }
 
-# Função para atualizar versão no POM
+# Atualizar versão no pom.xml
 update_pom_version() {
     local new_version=$1
-    log_info "Atualizando POM para versão: $new_version"
-    
+    log_info "Atualizando POM para versão: ${new_version}"
+
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        sed -i '' "/<artifactId>${SERVICE_NAME}<\/artifactId>/,/<version>/s|<version>.*</version>|<version>$new_version</version>|" "$POM_FILE"
+        sed -i '' "/<artifactId>${SERVICE_NAME}<\/artifactId>/,/<version>/s|<version>.*</version>|<version>${new_version}</version>|" "$POM_FILE"
     else
-        sed -i "/<artifactId>${SERVICE_NAME}<\/artifactId>/,/<version>/s|<version>.*</version>|<version>$new_version</version>|" "$POM_FILE"
+        sed -i "/<artifactId>${SERVICE_NAME}<\/artifactId>/,/<version>/s|<version>.*</version>|<version>${new_version}</version>|" "$POM_FILE"
     fi
-    
-    log_success "POM atualizado para: $new_version"
+
+    log_success "POM atualizado para: ${new_version}"
 }
 
-# Verificar parâmetros
+# Limpeza e restauração segura do Dockerfile
+cleanup() {
+    if [ -f "${DOCKERFILE_PATH}.bak" ]; then
+        mv "${DOCKERFILE_PATH}.bak" "${DOCKERFILE_PATH}"
+    fi
+}
+trap cleanup EXIT INT TERM
+
+# Analisar parâmetros
 DEPLOY_DOCKER=false
-if [ "$1" = "up" ]; then
-    DEPLOY_DOCKER=true
-    log_info "Modo: Build + Push + Deploy Docker"
-else
-    log_info "Modo: Build + Push (GitHub apenas)"
-fi
+TARGET_VERSION=""
+KEEP_CURRENT_VERSION=false
 
-# Extrai versão do pom.xml
-VERSION=$(get_current_version)
+for arg in "$@"; do
+    if [ "$arg" = "up" ]; then
+        DEPLOY_DOCKER=true
+    elif [ "$arg" = "--current" ]; then
+        KEEP_CURRENT_VERSION=true
+    elif [[ "$arg" =~ ^[0-9]+\.[0-9]+ ]]; then
+        TARGET_VERSION="$arg"
+    fi
+done
 
-if [ -z "$VERSION" ]; then
+CURRENT_VERSION=$(get_current_version)
+if [ -z "$CURRENT_VERSION" ]; then
     log_error "Não foi possível extrair a versão do pom.xml"
     exit 1
 fi
 
-log_info "Versão detectada: ${VERSION}"
+if [ -n "$TARGET_VERSION" ]; then
+    VERSION="$TARGET_VERSION"
+    update_pom_version "$VERSION"
+elif [ "$KEEP_CURRENT_VERSION" = true ]; then
+    VERSION="$CURRENT_VERSION"
+    log_info "Mantendo versão atual do POM: ${VERSION}"
+else
+    VERSION=$(increment_version "$CURRENT_VERSION")
+    update_pom_version "$VERSION"
+fi
 
-# Define imagens
 REGISTRY="ghcr.io/keepguard"
 IMAGE_NAME="${REGISTRY}/${SERVICE_NAME}"
 IMAGE_TAG="${IMAGE_NAME}:${VERSION}"
@@ -91,83 +118,73 @@ IMAGE_LATEST="${IMAGE_NAME}:latest"
 log_info "============================================"
 log_info "  Deploy ${SERVICE_NAME}"
 log_info "============================================"
-log_info "Registry: ${REGISTRY}"
-log_info "Image: ${IMAGE_TAG}"
+log_info "Versão POM:  ${VERSION}"
+log_info "Deploy Docker: ${DEPLOY_DOCKER}"
+log_info "Imagem Tag:  ${IMAGE_TAG}"
 log_info "============================================"
 
 # 1. Build Maven
-log_info "Executando Maven clean package..."
-cd "/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/backend/ms/${SERVICE_NAME}"
+log_step "1/5 Executando Maven clean package..."
+cd "${SCRIPT_DIR}"
 mvn clean package -DskipTests
 
-if [ ! -f "${TARGET_DIR}/${SERVICE_NAME}-${VERSION}.jar" ]; then
-    log_error "JAR não encontrado: ${TARGET_DIR}/${SERVICE_NAME}-${VERSION}.jar"
+JAR_FILE="${TARGET_DIR}/${SERVICE_NAME}-${VERSION}.jar"
+if [ ! -f "$JAR_FILE" ]; then
+    log_error "JAR não encontrado: ${JAR_FILE}"
     exit 1
 fi
-
-log_success "Build Maven concluído com sucesso"
+log_success "Build Maven concluído com sucesso: $(basename "$JAR_FILE")"
 
 # 2. Prepara Dockerfile
-log_info "Preparando Dockerfile..."
+log_step "2/5 Preparando Dockerfile..."
 cp "${DOCKERFILE_PATH}" "${DOCKERFILE_PATH}.bak"
 sed "s/VERSION_PLACEHOLDER/${VERSION}/g" "${DOCKERFILE_PATH}.bak" > "${DOCKERFILE_PATH}"
-log_success "Dockerfile preparado"
 
 # 3. Build Docker Image
-log_info "Construindo imagem Docker..."
+log_step "3/5 Construindo imagem Docker..."
 docker build -t "${IMAGE_TAG}" -t "${IMAGE_LATEST}" .
-
-if [ $? -ne 0 ]; then
-    log_error "Falha ao construir imagem Docker"
-    mv "${DOCKERFILE_PATH}.bak" "${DOCKERFILE_PATH}"
-    exit 1
-fi
-
-log_success "Imagem Docker construída: ${IMAGE_TAG}"
+log_success "Imagem Docker construída com sucesso: ${IMAGE_TAG}"
 
 # 4. Push para GitHub Container Registry
-log_info "Fazendo push para GitHub Container Registry..."
+log_step "4/5 Fazendo push para GitHub Container Registry..."
 docker push "${IMAGE_TAG}"
 docker push "${IMAGE_LATEST}"
-
-if [ $? -ne 0 ]; then
-    log_error "Falha ao fazer push da imagem"
-    mv "${DOCKERFILE_PATH}.bak" "${DOCKERFILE_PATH}"
-    exit 1
-fi
-
 log_success "Push concluído com sucesso"
 
-# 5. Restaura Dockerfile
-mv "${DOCKERFILE_PATH}.bak" "${DOCKERFILE_PATH}"
-
-# 6. Atualiza docker-compose.yml
-log_info "Atualizando docker-compose.yml..."
-sed -i '' "s|image: ${REGISTRY}/${SERVICE_NAME}:.*|image: ${IMAGE_TAG}|g" "${DOCKER_COMPOSE_FILE}"
-log_success "docker-compose.yml atualizado"
-
-# 7. Deploy no Docker Compose (se parâmetro "up")
-if [ "$DEPLOY_DOCKER" = true ]; then
-    log_info "Fazendo deploy no Docker Compose..."
-    cd "/Users/rafaelnogueirasoares/Projetos/keepguard/keepguard-core/docker/infra/api"
-    docker-compose up -d ${SERVICE_NAME}
-    
-    if [ $? -eq 0 ]; then
-        log_success "Container ${SERVICE_NAME} iniciado com sucesso"
+# 5. Atualização e Deploy Docker Compose
+if [ -f "$DOCKER_COMPOSE_FILE" ]; then
+    log_step "5/5 Atualizando docker-compose.yml..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "s|image: ${REGISTRY}/${SERVICE_NAME}:.*|image: ${IMAGE_TAG}|g" "${DOCKER_COMPOSE_FILE}"
     else
-        log_warning "Falha ao iniciar container ${SERVICE_NAME}"
+        sed -i "s|image: ${REGISTRY}/${SERVICE_NAME}:.*|image: ${IMAGE_TAG}|g" "${DOCKER_COMPOSE_FILE}"
+    fi
+    log_success "docker-compose.yml atualizado para ${IMAGE_TAG}"
+fi
+
+if [ "$DEPLOY_DOCKER" = true ]; then
+    log_info "Iniciando container no Docker Compose..."
+    cd "${PROJECT_ROOT}/docker"
+    docker compose up -d "${SERVICE_NAME}"
+    log_success "Container ${SERVICE_NAME} recriado com sucesso"
+
+    log_info "Aguardando healthcheck do container ${SERVICE_NAME}..."
+    CONTAINER_NAME=$(docker ps --filter "name=${SERVICE_NAME}" --format "{{.Names}}" | head -1)
+    if [ -n "$CONTAINER_NAME" ]; then
+        for i in {1..15}; do
+            STATUS=$(docker inspect --format='{{json .State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null || echo '"running"')
+            if [ "$STATUS" = '"healthy"' ] || [ "$STATUS" = '"running"' ]; then
+                log_success "Container ${CONTAINER_NAME} está saudável (${STATUS})!"
+                break
+            fi
+            sleep 2
+        done
     fi
 fi
 
-# 8. Auto-incrementa versão do POM
-log_info "Incrementando versão do POM..."
-NEXT_VERSION=$(increment_version "$VERSION")
-update_pom_version "$NEXT_VERSION"
-
 log_success "============================================"
-log_success "  Deploy concluído com sucesso!"
+log_success "  Deploy de ${SERVICE_NAME} finalizado com sucesso!"
 log_success "============================================"
 log_info "Imagem: ${IMAGE_TAG}"
 log_info "Latest: ${IMAGE_LATEST}"
-log_info "Próxima versão: ${NEXT_VERSION}"
 log_success "============================================"

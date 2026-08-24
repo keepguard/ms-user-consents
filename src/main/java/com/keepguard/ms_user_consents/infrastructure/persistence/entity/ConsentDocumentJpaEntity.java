@@ -11,18 +11,27 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.springframework.data.domain.Persistable;
+
 @Entity
 @Table(name = "consent_documents", schema = "ms_user_consents")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ConsentDocumentJpaEntity {
+public class ConsentDocumentJpaEntity implements Persistable<UUID> {
     
     @Id
     @Column(name = "id", nullable = false)
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @Transient
+    private boolean isNew = true;
+
+    @Override
+    public boolean isNew() {
+        return isNew || createdAt == null;
+    }
 
     @Column(name = "title", nullable = false, length = 255)
     private String title;
