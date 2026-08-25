@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-user-consents
+  labels:
+    app: ms-user-consents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-user-consents
+  template:
+    metadata:
+      labels:
+        app: ms-user-consents
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: ms-user-consents
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: {{ .Values.env.springProfilesActive | quote }}
+        - name: SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED
+          value: "false"
+        - name: SERVER_PORT
+          value: {{ .Values.env.serverPort | quote }}
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: keepguard-secret
+              key: JWT_SECRET
+        - name: SPRING_DATASOURCE_URL
+          value: "jdbc:postgresql://postgres:5432/{{ .Values.env.postgresDb }}"
+        - name: SPRING_DATASOURCE_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: keepguard-config
+              key: POSTGRES_USER
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keepguard-secret
+              key: POSTGRES_PASSWORD
+        - name: SPRING_DATA_REDIS_HOST
+          value: {{ .Values.env.redisHost | quote }}
+        - name: SPRING_DATA_REDIS_PORT
+          value: {{ .Values.env.redisPort | quote }}
+        - name: KEEPGUARD_VALIDATION_MODERATION_ENABLED
+          value: "false"
+        ports:
+        - containerPort: {{ .Values.service.port }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-user-consents
+  labels:
+    app: ms-user-consents
+spec:
+  selector:
+    app: ms-user-consents
+  ports:
+  - port: {{ .Values.service.port }}
+    targetPort: {{ .Values.service.port }}

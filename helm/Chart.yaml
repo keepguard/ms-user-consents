@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ms-user-consents
+description: Helm Chart para o Microsserviço ms-user-consents do KeepGuard
+type: application
+version: 1.0.1
+appVersion: "1.0.1"
