@@ -78,6 +78,49 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+
+# Commita e faz push das alterações do repositório do serviço após o release
+commit_and_push_release() {
+    local release_version=$1
+    local repo_dir=${2:-"${SCRIPT_DIR}"}
+
+    log_step "Commit e push das alterações (Release ${release_version})..."
+
+    if ! git -C "${repo_dir}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        log_warning "Diretório não é um repositório git: ${repo_dir}. Pulando commit/push."
+        return 0
+    fi
+
+    pushd "${repo_dir}" > /dev/null
+
+    git add -A
+    if git diff --cached --quiet; then
+        log_info "Nenhuma alteração pendente para commit."
+        popd > /dev/null
+        return 0
+    fi
+
+    if ! git commit -m "$(cat <<EOF
+Release ${release_version}
+
+EOF
+)"; then
+        log_error "Falha ao criar commit do release ${release_version}"
+        popd > /dev/null
+        return 1
+    fi
+
+    if ! git push; then
+        log_error "Falha ao fazer push do release ${release_version}"
+        popd > /dev/null
+        return 1
+    fi
+
+    log_success "Commit e push concluídos (Release ${release_version})"
+    popd > /dev/null
+    return 0
+}
+
 # Analisar parâmetros
 DEPLOY_DOCKER=false
 TARGET_VERSION=""
@@ -181,6 +224,9 @@ if [ "$DEPLOY_DOCKER" = true ]; then
         done
     fi
 fi
+
+# 6. Commit e push das alterações no repositório do serviço
+commit_and_push_release "${VERSION}" "${SCRIPT_DIR}"
 
 log_success "============================================"
 log_success "  Deploy de ${SERVICE_NAME} finalizado com sucesso!"
