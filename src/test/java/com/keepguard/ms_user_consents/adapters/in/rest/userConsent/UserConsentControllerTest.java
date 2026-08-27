@@ -417,5 +417,50 @@ class UserConsentControllerTest {
 
         verifyNoInteractions(userConsentPort);
     }
+
+    @Test
+    @DisplayName("Deve registrar aceite seletivo em lote com sucesso")
+    void shouldAcceptBatchSuccessfully() throws Exception {
+        // Given
+        UUID userId = UUID.randomUUID();
+        UUID docId = UUID.randomUUID();
+
+        var resultDTO = UserConsentAcceptAllResultDTO.builder()
+                .acceptedConsents(List.of())
+                .build();
+
+        var responseDTO = UserConsentAcceptAllResponseDTO.builder()
+                .totalAccepted(1)
+                .acceptedConsents(List.of())
+                .build();
+
+        String requestBody = """
+                {
+                    "userId": "%s",
+                    "email": "user@example.com",
+                    "acceptedAt": "2025-01-13T21:00:00.000Z",
+                    "geolocation": "São Paulo, BR",
+                    "consents": [
+                        {
+                            "documentId": "%s",
+                            "version": 1,
+                            "accepted": true,
+                            "contentHash": "sha256_mock_hash"
+                        }
+                    ]
+                }
+                """.formatted(userId, docId);
+
+        when(userConsentPort.acceptBatch(any())).thenReturn(resultDTO);
+        when(mapper.toAcceptAllResponseDTO(any())).thenReturn(responseDTO);
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/user-consents/accept-batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000")
+                        .content(requestBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.totalAccepted").value(1));
+    }
 }
 

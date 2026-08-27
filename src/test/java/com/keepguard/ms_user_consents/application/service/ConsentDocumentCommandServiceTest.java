@@ -43,13 +43,16 @@ class ConsentDocumentCommandServiceTest {
     @Mock
     private MetricsPort metricsPort;
 
+    @Mock
+    private TermsManifestPublisherService manifestPublisherService;
+
     private ConsentDocumentCreateCommandDTO createCommand;
     private ConsentDocument savedDocument;
     private UUID documentId;
 
     @BeforeEach
     void setUp() {
-        service = new ConsentDocumentCommandService(repositoryPort, storagePort, cachePort, metricsPort);
+        service = new ConsentDocumentCommandService(repositoryPort, storagePort, cachePort, metricsPort, manifestPublisherService);
 
         documentId = UUID.randomUUID();
 

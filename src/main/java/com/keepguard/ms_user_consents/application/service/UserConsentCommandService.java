@@ -187,6 +187,72 @@ public class UserConsentCommandService {
                         .toList())
                 .build();
     }
+
+    @LogOperation(
+        operation = "ACCEPT_BATCH_USER_CONSENTS",
+        description = "Registrando aceite seletivo em lote de consentimentos para usuário: {command.userId}",
+        audit = true,
+        auditAction = "ACCEPT_BATCH",
+        auditEntityType = "USER_CONSENT"
+    )
+    public UserConsentAcceptAllResultDTO acceptBatch(com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptBatchCommandDTO command) {
+        log.info("Registrando aceite seletivo em lote - User: {}, Itens recebidos: {}", 
+                command.getUserId(), command.getConsents().size());
+
+        List<UserConsent> acceptedConsents = new ArrayList<>();
+        int ignoredCount = 0;
+
+        for (var item : command.getConsents()) {
+            if (!item.isAccepted()) {
+                log.info("Item de consentimento desmarcado/recusado pelo usuário - DocId: {}", item.getDocumentId());
+                ignoredCount++;
+                continue;
+            }
+
+            boolean alreadyAccepted = repositoryPort.existsByUserIdAndConsentDocumentIdAndVersion(
+                    command.getUserId(),
+                    item.getDocumentId(),
+                    item.getVersion()
+            );
+
+            if (alreadyAccepted) {
+                log.debug("Usuário {} já aceitou versão {} do documento {} - ignorando",
+                        command.getUserId(), item.getVersion(), item.getDocumentId());
+                ignoredCount++;
+                continue;
+            }
+
+            UserConsent consent = UserConsent.accept(
+                    command.getUserId(),
+                    command.getEmail(),
+                    item.getDocumentId(),
+                    item.getVersion(),
+                    command.getAcceptedAt(),
+                    command.getIpAddress(),
+                    command.getUserAgent(),
+                    command.getGeolocation()
+            );
+
+            UserConsent saved = repositoryPort.save(consent);
+            acceptedConsents.add(saved);
+
+            metricsPort.incrementCounter("user_consent_accepted_total",
+                Map.of("user_id", command.getUserId().toString(), 
+                       "document_id", item.getDocumentId().toString(),
+                       "version", String.valueOf(item.getVersion())));
+        }
+
+        invalidateCacheAfterAcceptAll(command.getUserId(), acceptedConsents);
+
+        log.info("Aceite seletivo em lote concluído - User: {}, Aceitos: {}, Ignorados: {}",
+                command.getUserId(), acceptedConsents.size(), ignoredCount);
+
+        return UserConsentAcceptAllResultDTO.builder()
+                .acceptedConsents(acceptedConsents.stream()
+                        .map(this::toViewDTO)
+                        .toList())
+                .build();
+    }
     
     private void invalidateCacheAfterAcceptAll(java.util.UUID userId, List<UserConsent> acceptedConsents) {
         log.debug("Invalidando cache após aceite em lote: userId={}, totalAccepted={}", userId, acceptedConsents.size());

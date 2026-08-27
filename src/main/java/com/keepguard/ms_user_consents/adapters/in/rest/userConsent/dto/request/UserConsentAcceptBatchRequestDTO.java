@@ -1,0 +1,53 @@
+package com.keepguard.ms_user_consents.adapters.in.rest.userConsent.dto.request;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserConsentAcceptBatchRequestDTO {
+
+    @NotNull(message = "UserId is required")
+    private UUID userId;
+
+    @NotNull(message = "Email is required")
+    private String email;
+
+    @NotNull(message = "AcceptedAt is required")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")
+    private LocalDateTime acceptedAt;
+
+    private String geolocation;
+
+    @NotEmpty(message = "Consents list cannot be empty")
+    @Valid
+    private List<ConsentItemRequestDTO> consents;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ConsentItemRequestDTO {
+        @NotNull(message = "DocumentId is required")
+        private UUID documentId;
+
+        @NotNull(message = "Version is required")
+        private Integer version;
+
+        private boolean accepted;
+
+        private String contentHash;
+    }
+}

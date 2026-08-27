@@ -31,6 +31,7 @@ public class ConsentDocumentCommandService {
     private final StoragePort storagePort;
     private final ConsentDocumentCachePort cachePort;
     private final MetricsPort metricsPort;
+    private final TermsManifestPublisherService manifestPublisherService;
 
     @Value("${storage.minio.bucket.consents}")
     private String consentsBucket;
@@ -235,6 +236,9 @@ public class ConsentDocumentCommandService {
         // Invalida cache relacionado
         invalidateCacheAfterPublish(saved);
         
+        // Atualiza o manifesto de termos no MinIO
+        manifestPublisherService.publishManifest(null);
+        
         // Métricas
         metricsPort.incrementCounter("consent_document_published_total",
             Map.of("entity_id", saved.getId().toString(), "type", saved.getType().name()));
@@ -260,6 +264,9 @@ public class ConsentDocumentCommandService {
         
         // Invalida cache relacionado
         invalidateCacheAfterArchive(saved);
+        
+        // Atualiza o manifesto de termos no MinIO
+        manifestPublisherService.publishManifest(null);
         
         // Métricas
         metricsPort.incrementCounter("consent_document_archived_total",

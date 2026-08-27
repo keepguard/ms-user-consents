@@ -130,6 +130,62 @@ public class UserConsentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PostMapping("/accept-batch")
+    @Operation(
+        summary = "Registrar aceite seletivo em lote de consentimentos",
+        description = "Registra o aceite granular de documentos de consentimento por parte do usuário. " +
+                    "Captura informações de auditoria forense (IP, User-Agent, UTC)."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Aceites em lote registrados com sucesso"),
+        @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos"),
+        @ApiResponse(responseCode = "401", description = "Aplicação não autorizada"),
+        @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<UserConsentAcceptAllResponseDTO> acceptBatch(
+            @Valid @RequestBody com.keepguard.ms_user_consents.adapters.in.rest.userConsent.dto.request.UserConsentAcceptBatchRequestDTO request,
+            @Parameter(description = "UUID da aplicação", required = true)
+            @RequestHeader("X-Tenant-Id") String tenantIdHeader,
+            HttpServletRequest httpRequest
+    ) {
+        log.info("POST /api/v1/user-consents/accept-batch - User: {}, Total itens: {}, Application: {}",
+                request.getUserId(), request.getConsents().size(), tenantIdHeader);
+
+        // Valida o X-Tenant-Id
+        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+
+        // Captura informações de auditoria
+        String ipAddress = getClientIpAddress(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        var items = request.getConsents().stream()
+                .map(i -> com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptBatchCommandDTO.ConsentItemCommandDTO.builder()
+                        .documentId(i.getDocumentId())
+                        .version(i.getVersion())
+                        .accepted(i.isAccepted())
+                        .contentHash(i.getContentHash())
+                        .build())
+                .toList();
+
+        var command = com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptBatchCommandDTO.builder()
+                .userId(request.getUserId())
+                .email(request.getEmail())
+                .acceptedAt(request.getAcceptedAt())
+                .ipAddress(ipAddress)
+                .userAgent(userAgent)
+                .geolocation(request.getGeolocation())
+                .consents(items)
+                .build();
+
+        var result = userConsentPort.acceptBatch(command);
+        var response = mapper.toAcceptAllResponseDTO(result);
+
+        log.info("Aceite seletivo em lote concluído - User: {}, Total gravados: {}, Application: {}",
+                request.getUserId(), response.getTotalAccepted(), tenantId);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     @GetMapping("/{id}")
     @Operation(
         summary = "Buscar consentimento por ID",

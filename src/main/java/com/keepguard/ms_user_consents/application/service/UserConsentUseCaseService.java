@@ -72,6 +72,12 @@ public class UserConsentUseCaseService implements UserConsentPort {
 
     @Override
     @Transactional
+    public UserConsentAcceptAllResultDTO acceptBatch(com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptBatchCommandDTO command) {
+        return commandService.acceptBatch(command);
+    }
+
+    @Override
+    @Transactional
     public void deleteAllByUserId(UUID userId) {
         commandService.deleteAllByUserId(userId);
     }
