@@ -34,8 +34,8 @@ public class TermsManifestPublisherService {
     @Value("${storage.minio.endpoint}")
     private String minioEndpoint;
 
-    public TermsManifestDTO publishManifest(UUID tenantId) {
-        log.info("Gerando e publicando terms-manifest.json no MinIO para o tenant: {}", tenantId);
+    public TermsManifestDTO publishManifest(UUID companyId) {
+        log.info("Gerando e publicando terms-manifest.json no MinIO para o tenant: {}", companyId);
 
         List<ConsentDocument> publishedDocs = repositoryPort.findAllPublished();
 
@@ -69,7 +69,7 @@ public class TermsManifestPublisherService {
         LocalDateTime now = LocalDateTime.now();
 
         TermsManifestDTO manifest = TermsManifestDTO.builder()
-                .tenantId(tenantId)
+                .companyId(companyId)
                 .version(manifestVersion)
                 .publishedAt(now)
                 .effectiveAt(now)
@@ -82,8 +82,8 @@ public class TermsManifestPublisherService {
             byte[] jsonBytes = manifestJson.getBytes(StandardCharsets.UTF_8);
 
             // Upload para o MinIO particionado por tenant
-            String s3Key = tenantId != null 
-                    ? String.format("public-legal/%s/terms-manifest.json", tenantId)
+            String s3Key = companyId != null 
+                    ? String.format("public-legal/%s/terms-manifest.json", companyId)
                     : "public-legal/global/terms-manifest.json";
 
             storagePort.uploadFile(
@@ -96,7 +96,7 @@ public class TermsManifestPublisherService {
 
             log.info("terms-manifest.json publicado com sucesso no MinIO - S3Key: {}, Versao: {}", s3Key, manifestVersion);
         } catch (Exception e) {
-            log.error("Erro ao gerar/publicar terms-manifest.json no MinIO para o tenant: {}", tenantId, e);
+            log.error("Erro ao gerar/publicar terms-manifest.json no MinIO para o tenant: {}", companyId, e);
             // Não impede a transação principal caso storage falhe temporariamente
         }
 

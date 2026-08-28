@@ -49,15 +49,14 @@ public class UserConsentController {
     })
     public ResponseEntity<UserConsentResponseDTO> accept(
             @Valid @RequestBody UserConsentAcceptRequestDTO request,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader,
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId,
             HttpServletRequest httpRequest
     ) {
         log.info("POST /api/v1/user-consents/accept - User: {}, Document: {}, Application: {}",
-                request.getUserId(), request.getConsentDocumentId(), tenantIdHeader);
+                request.getUserId(), request.getConsentDocumentId(), companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         // Captura informações de auditoria
         String ipAddress = getClientIpAddress(httpRequest);
@@ -78,7 +77,7 @@ public class UserConsentController {
         var response = mapper.toResponseDTO(accepted);
 
         log.info("Consentimento aceito com sucesso - User: {}, Document: {}, Application: {}",
-                request.getUserId(), request.getConsentDocumentId(), tenantId);
+                request.getUserId(), request.getConsentDocumentId(), companyId);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -98,15 +97,14 @@ public class UserConsentController {
     })
     public ResponseEntity<UserConsentAcceptAllResponseDTO> acceptAll(
             @Valid @RequestBody UserConsentAcceptAllRequestDTO request,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader,
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId,
             HttpServletRequest httpRequest
     ) {
         log.info("POST /api/v1/user-consents/accept-all - User: {}, Application: {}",
-                request.getUserId(), tenantIdHeader);
+                request.getUserId(), companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         // Captura informações de auditoria
         String ipAddress = getClientIpAddress(httpRequest);
@@ -125,7 +123,7 @@ public class UserConsentController {
         var response = mapper.toAcceptAllResponseDTO(result);
 
         log.info("Aceite em lote concluído - User: {}, Total aceitos: {}, Application: {}",
-                request.getUserId(), response.getTotalAccepted(), tenantId);
+                request.getUserId(), response.getTotalAccepted(), companyId);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -144,15 +142,14 @@ public class UserConsentController {
     })
     public ResponseEntity<UserConsentAcceptAllResponseDTO> acceptBatch(
             @Valid @RequestBody com.keepguard.ms_user_consents.adapters.in.rest.userConsent.dto.request.UserConsentAcceptBatchRequestDTO request,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader,
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId,
             HttpServletRequest httpRequest
     ) {
         log.info("POST /api/v1/user-consents/accept-batch - User: {}, Total itens: {}, Application: {}",
-                request.getUserId(), request.getConsents().size(), tenantIdHeader);
+                request.getUserId(), request.getConsents().size(), companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         // Captura informações de auditoria
         String ipAddress = getClientIpAddress(httpRequest);
@@ -181,7 +178,7 @@ public class UserConsentController {
         var response = mapper.toAcceptAllResponseDTO(result);
 
         log.info("Aceite seletivo em lote concluído - User: {}, Total gravados: {}, Application: {}",
-                request.getUserId(), response.getTotalAccepted(), tenantId);
+                request.getUserId(), response.getTotalAccepted(), companyId);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -199,12 +196,11 @@ public class UserConsentController {
     })
     public ResponseEntity<UserConsentResponseDTO> findById(
             @PathVariable UUID id,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
-        log.info("GET /api/v1/user-consents/{} - Application: {}", id, tenantIdHeader);
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId) {
+        log.info("GET /api/v1/user-consents/{} - Application: {}", id, companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         var consent = userConsentPort.findById(id);
         var response = mapper.toResponseDTO(consent);
@@ -224,12 +220,11 @@ public class UserConsentController {
     })
     public ResponseEntity<List<UserConsentResponseDTO>> findByUserId(
             @PathVariable UUID userId,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
-        log.info("GET /api/v1/user-consents/user/{} - Application: {}", userId, tenantIdHeader);
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId) {
+        log.info("GET /api/v1/user-consents/user/{} - Application: {}", userId, companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         var consents = userConsentPort.findByUserId(userId);
         var responses = consents.stream()
@@ -252,13 +247,12 @@ public class UserConsentController {
     public ResponseEntity<List<UserConsentResponseDTO>> findByUserIdAndConsentDocumentId(
             @PathVariable UUID userId,
             @PathVariable UUID consentDocumentId,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId
     ) {
-        log.info("GET /api/v1/user-consents/user/{}/document/{} - Application: {}", userId, consentDocumentId, tenantIdHeader);
+        log.info("GET /api/v1/user-consents/user/{}/document/{} - Application: {}", userId, consentDocumentId, companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         var consents = userConsentPort.findByUserIdAndConsentDocumentId(userId, consentDocumentId);
         var responses = consents.stream()
@@ -282,13 +276,12 @@ public class UserConsentController {
     public ResponseEntity<UserConsentResponseDTO> findLatestByUserIdAndConsentDocumentId(
             @PathVariable UUID userId,
             @PathVariable UUID consentDocumentId,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId
     ) {
-        log.info("GET /api/v1/user-consents/user/{}/document/{}/latest - Application: {}", userId, consentDocumentId, tenantIdHeader);
+        log.info("GET /api/v1/user-consents/user/{}/document/{}/latest - Application: {}", userId, consentDocumentId, companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         var consent = userConsentPort.findLatestByUserIdAndConsentDocumentId(userId, consentDocumentId);
         var response = mapper.toResponseDTO(consent);
@@ -310,13 +303,12 @@ public class UserConsentController {
             @PathVariable UUID userId,
             @PathVariable UUID consentDocumentId,
             @PathVariable Integer version,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId
     ) {
-        log.info("GET /api/v1/user-consents/user/{}/document/{}/version/{}/check - Application: {}", userId, consentDocumentId, version, tenantIdHeader);
+        log.info("GET /api/v1/user-consents/user/{}/document/{}/version/{}/check - Application: {}", userId, consentDocumentId, version, companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         boolean hasAccepted = userConsentPort.hasAccepted(userId, consentDocumentId, version);
 
@@ -336,16 +328,15 @@ public class UserConsentController {
     })
     public ResponseEntity<Void> deleteAllByUserId(
             @PathVariable UUID userId,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
-        log.info("DELETE /api/v1/user-consents/user/{} - Application: {}", userId, tenantIdHeader);
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId) {
+        log.info("DELETE /api/v1/user-consents/user/{} - Application: {}", userId, companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         userConsentPort.deleteAllByUserId(userId);
 
-        log.info("Todos os consentimentos deletados com sucesso para usuário: {} - Application: {}", userId, tenantId);
+        log.info("Todos os consentimentos deletados com sucesso para usuário: {} - Application: {}", userId, companyId);
 
         return ResponseEntity.noContent().build();
     }

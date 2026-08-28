@@ -42,12 +42,11 @@ public class ComplianceController {
     })
     public ResponseEntity<ComplianceStatusResponseDTO> checkUserCompliance(
             @PathVariable UUID userId,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
-        log.info("GET /api/v1/compliance/user/{} - Application: {}", userId, tenantIdHeader);
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId) {
+        log.info("GET /api/v1/compliance/user/{} - Application: {}", userId, companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         var status = compliancePort.checkUserCompliance(userId);
         var response = mapper.toResponseDTO(status);
@@ -68,12 +67,11 @@ public class ComplianceController {
     })
     public ResponseEntity<Boolean> hasMandatoryConsents(
             @PathVariable UUID userId,
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
-        log.info("GET /api/v1/compliance/user/{}/mandatory - Application: {}", userId, tenantIdHeader);
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId) {
+        log.info("GET /api/v1/compliance/user/{}/mandatory - Application: {}", userId, companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         boolean hasMandatory = compliancePort.hasMandatoryConsents(userId);
 
@@ -91,12 +89,11 @@ public class ComplianceController {
         @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<List<ConsentType>> listAllConsentTypes(
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
-        log.info("GET /api/v1/compliance/consent-types - Application: {}", tenantIdHeader);
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId) {
+        log.info("GET /api/v1/compliance/consent-types - Application: {}", companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         var types = compliancePort.listAllConsentTypes();
 
@@ -114,12 +111,11 @@ public class ComplianceController {
         @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     public ResponseEntity<List<ConsentType>> listMandatoryConsentTypes(
-            @Parameter(description = "UUID da aplicação", required = true)
-            @RequestHeader("X-Tenant-Id") String tenantIdHeader) {
-        log.info("GET /api/v1/compliance/consent-types/mandatory - Application: {}", tenantIdHeader);
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId) {
+        log.info("GET /api/v1/compliance/consent-types/mandatory - Application: {}", companyId);
 
-        // Valida o X-Tenant-Id
-        UUID tenantId = ValidationUtils.validateTenantId(tenantIdHeader);
+        // Valida o X-Company-Id
 
         var types = compliancePort.listMandatoryConsentTypes();
 

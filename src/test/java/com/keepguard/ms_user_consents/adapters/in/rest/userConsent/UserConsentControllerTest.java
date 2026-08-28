@@ -104,7 +104,7 @@ class UserConsentControllerTest {
         // When & Then
         mockMvc.perform(post("/api/v1/user-consents/accept")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000")
+                        .header("X-Company-Id", "550e8400-e29b-41d4-a716-446655440000")
                         .content(requestBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.userId").value(userId.toString()))
@@ -148,7 +148,7 @@ class UserConsentControllerTest {
 
         // When & Then
         mockMvc.perform(get("/api/v1/user-consents/{id}", consentId)
-                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000"))
+                        .header("X-Company-Id", "550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(userId.toString()))
                 .andExpect(jsonPath("$.consentDocumentId").value(consentDocumentId.toString()));
@@ -191,7 +191,7 @@ class UserConsentControllerTest {
 
         // When & Then
         mockMvc.perform(get("/api/v1/user-consents/user/{userId}", userId)
-                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000"))
+                        .header("X-Company-Id", "550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].userId").value(userId.toString()));
@@ -209,7 +209,7 @@ class UserConsentControllerTest {
         // When & Then
         mockMvc.perform(get("/api/v1/user-consents/user/{userId}/document/{consentDocumentId}/version/{version}/check",
                         userId, consentDocumentId, 1)
-                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000"))
+                        .header("X-Company-Id", "550e8400-e29b-41d4-a716-446655440000"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").value(true));
     }
@@ -229,7 +229,7 @@ class UserConsentControllerTest {
         // When & Then
         mockMvc.perform(post("/api/v1/user-consents/accept")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000")
+                        .header("X-Company-Id", "550e8400-e29b-41d4-a716-446655440000")
                         .content(invalidRequestBody))
                         .andExpect(status().isBadRequest());
     }
@@ -291,7 +291,7 @@ class UserConsentControllerTest {
         // When & Then
         mockMvc.perform(post("/api/v1/user-consents/accept-all")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000")
+                        .header("X-Company-Id", "550e8400-e29b-41d4-a716-446655440000")
                         .header("User-Agent", "Mozilla/5.0")
                         .content(requestBody))
                 .andExpect(status().isCreated())
@@ -329,7 +329,7 @@ class UserConsentControllerTest {
         // When & Then
         mockMvc.perform(post("/api/v1/user-consents/accept-all")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000")
+                        .header("X-Company-Id", "550e8400-e29b-41d4-a716-446655440000")
                         .content(requestBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.totalAccepted").value(0))
@@ -364,7 +364,7 @@ class UserConsentControllerTest {
         // When & Then
         mockMvc.perform(post("/api/v1/user-consents/accept-all")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000")
+                        .header("X-Company-Id", "550e8400-e29b-41d4-a716-446655440000")
                         .header("X-Forwarded-For", "203.0.113.195")
                         .content(requestBody))
                 .andExpect(status().isCreated());
@@ -411,7 +411,7 @@ class UserConsentControllerTest {
         // When & Then
         mockMvc.perform(post("/api/v1/user-consents/accept-all")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000")
+                        .header("X-Company-Id", "550e8400-e29b-41d4-a716-446655440000")
                         .content(invalidRequestBody))
                 .andExpect(status().isBadRequest());
 
@@ -457,7 +457,7 @@ class UserConsentControllerTest {
         // When & Then
         mockMvc.perform(post("/api/v1/user-consents/accept-batch")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("X-Tenant-Id", "550e8400-e29b-41d4-a716-446655440000")
+                        .header("X-Company-Id", "550e8400-e29b-41d4-a716-446655440000")
                         .content(requestBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.totalAccepted").value(1));

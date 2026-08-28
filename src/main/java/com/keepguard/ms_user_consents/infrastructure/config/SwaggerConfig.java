@@ -55,7 +55,7 @@ public class SwaggerConfig {
                                 .name(TENANT_ID_HEADER)
                                 .type(SecurityScheme.Type.APIKEY)
                                 .in(SecurityScheme.In.HEADER)
-                                .description("UUID da aplicação que está consumindo a API")))
+                                .description("UUID da empresa que está consumindo a API")))
                 .addSecurityItem(new SecurityRequirement()
                         .addList(SECURITY_SCHEME_NAME)
                         .addList(TENANT_ID_HEADER));

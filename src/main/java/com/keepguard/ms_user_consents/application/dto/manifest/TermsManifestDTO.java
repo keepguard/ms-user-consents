@@ -18,7 +18,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class TermsManifestDTO {
 
-    private UUID tenantId;
+    private UUID companyId;
     private String version;
 
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "UTC")

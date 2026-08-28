@@ -69,7 +69,7 @@ public class GlobalExceptionHandler {
         
         String message;
         if ("X-Tenant-Id".equals(ex.getHeaderName())) {
-            message = "Header obrigatório 'X-Tenant-Id' não foi fornecido. Este header deve conter o UUID da aplicação que está consumindo a API.";
+            message = "Header obrigatório 'X-Tenant-Id' não foi fornecido. Este header deve conter o UUID da empresa que está consumindo a API.";
         } else {
             message = String.format("Header obrigatório '%s' não foi fornecido.", ex.getHeaderName());
         }
