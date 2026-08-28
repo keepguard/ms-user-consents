@@ -35,7 +35,7 @@ public class ComplianceCacheService implements ComplianceCachePort {
     @Retry(name = "redisCache")
     public ComplianceStatusViewDTO getUserCompliance(UUID userId) {
         try {
-            String key = String.format("%s:user:%s", complianceCachePrefix, userId);
+            String key = userKey(userId);
             String value = redisTemplate.opsForValue().get(key);
             if (value == null || value.isBlank()) {
                 return null;
@@ -51,7 +51,7 @@ public class ComplianceCacheService implements ComplianceCachePort {
     @CircuitBreaker(name = "redisCache")
     public void cacheUserCompliance(UUID userId, ComplianceStatusViewDTO compliance) {
         try {
-            String key = String.format("%s:user:%s", complianceCachePrefix, userId);
+            String key = userKey(userId);
             String value = objectMapper.writeValueAsString(compliance);
             redisTemplate.opsForValue().set(key, value, complianceTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -63,7 +63,7 @@ public class ComplianceCacheService implements ComplianceCachePort {
     @CircuitBreaker(name = "redisCache")
     public void removeUserCompliance(UUID userId) {
         try {
-            String key = String.format("%s:user:%s", complianceCachePrefix, userId);
+            String key = userKey(userId);
             redisTemplate.delete(key);
         } catch (Exception e) {
             log.warn("Erro ao remover compliance do cache para userId: {}", userId, e);
@@ -76,7 +76,7 @@ public class ComplianceCacheService implements ComplianceCachePort {
     @Retry(name = "redisCache")
     public ComplianceStatusViewDTO getUserComplianceByType(UUID userId, ConsentType type) {
         try {
-            String key = String.format("%s:user:%s:type:%s", complianceCachePrefix, userId, type);
+            String key = userTypeKey(userId, type);
             String value = redisTemplate.opsForValue().get(key);
             if (value == null || value.isBlank()) {
                 return null;
@@ -92,7 +92,7 @@ public class ComplianceCacheService implements ComplianceCachePort {
     @CircuitBreaker(name = "redisCache")
     public void cacheUserComplianceByType(UUID userId, ConsentType type, ComplianceStatusViewDTO compliance) {
         try {
-            String key = String.format("%s:user:%s:type:%s", complianceCachePrefix, userId, type);
+            String key = userTypeKey(userId, type);
             String value = objectMapper.writeValueAsString(compliance);
             redisTemplate.opsForValue().set(key, value, complianceTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -104,7 +104,7 @@ public class ComplianceCacheService implements ComplianceCachePort {
     @CircuitBreaker(name = "redisCache")
     public void removeUserComplianceByType(UUID userId, ConsentType type) {
         try {
-            String key = String.format("%s:user:%s:type:%s", complianceCachePrefix, userId, type);
+            String key = userTypeKey(userId, type);
             redisTemplate.delete(key);
         } catch (Exception e) {
             log.warn("Erro ao remover compliance do cache para userId: {}, type: {}", userId, type, e);
@@ -116,7 +116,7 @@ public class ComplianceCacheService implements ComplianceCachePort {
     @CircuitBreaker(name = "redisCache")
     public void clearAll() {
         try {
-            String pattern = complianceCachePrefix + ":*";
+            String pattern = basePrefix() + ":*";
             var keys = redisTemplate.keys(pattern);
             if (keys != null && !keys.isEmpty()) {
                 var deletedCount = redisTemplate.delete(keys);
@@ -136,6 +136,25 @@ public class ComplianceCacheService implements ComplianceCachePort {
     private ComplianceStatusViewDTO getUserComplianceByTypeFallback(UUID userId, ConsentType type, Exception ex) {
         log.warn("FALLBACK: Redis indisponível para getUserComplianceByType");
         return null;
+    }
+
+    private String basePrefix() {
+        if (complianceCachePrefix == null || complianceCachePrefix.isBlank()) {
+            return "compliance_cache";
+        }
+        return complianceCachePrefix.replaceAll(":+$", "");
+    }
+
+    private String userKey(UUID userId) {
+        return basePrefix() + ":user:" + userId;
+    }
+
+    private String userTypeKey(UUID userId, ConsentType type) {
+        return basePrefix() + ":user:" + userId + ":type:" + enumName(type);
+    }
+
+    private String enumName(Enum<?> value) {
+        return value == null ? "" : value.name().toLowerCase();
     }
 }
 

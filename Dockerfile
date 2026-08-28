@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y wget curl && rm -rf /var/lib/apt/lists/
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Copia o JAR compilado localmente
-COPY target/ms-user-consents-1.0.4.jar app.jar
+COPY target/ms-user-consents-1.0.5.jar app.jar
 
 # Define as permissões corretas
 RUN chown -R appuser:appuser /app

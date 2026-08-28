@@ -36,7 +36,7 @@ public class UserConsentCacheService implements UserConsentCachePort {
     @Retry(name = "redisCache")
     public UserConsentViewDTO getLatestByUserIdAndConsentDocumentId(UUID userId, UUID consentDocumentId) {
         try {
-            String key = String.format("%s:latest:%s:%s", userConsentCachePrefix, userId, consentDocumentId);
+            String key = latestKey(userId, consentDocumentId);
             String value = redisTemplate.opsForValue().get(key);
             if (value == null || value.isBlank()) {
                 return null;
@@ -52,7 +52,7 @@ public class UserConsentCacheService implements UserConsentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void cacheLatestByUserIdAndConsentDocumentId(UUID userId, UUID consentDocumentId, UserConsentViewDTO consent) {
         try {
-            String key = String.format("%s:latest:%s:%s", userConsentCachePrefix, userId, consentDocumentId);
+            String key = latestKey(userId, consentDocumentId);
             String value = objectMapper.writeValueAsString(consent);
             redisTemplate.opsForValue().set(key, value, userConsentTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -64,7 +64,7 @@ public class UserConsentCacheService implements UserConsentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void removeLatestByUserIdAndConsentDocumentId(UUID userId, UUID consentDocumentId) {
         try {
-            String key = String.format("%s:latest:%s:%s", userConsentCachePrefix, userId, consentDocumentId);
+            String key = latestKey(userId, consentDocumentId);
             redisTemplate.delete(key);
         } catch (Exception e) {
             log.warn("Erro ao remover consentimento do cache: userId={}, consentDocumentId={}", userId, consentDocumentId, e);
@@ -77,7 +77,7 @@ public class UserConsentCacheService implements UserConsentCachePort {
     @Retry(name = "redisCache")
     public Boolean hasAccepted(UUID userId, UUID consentDocumentId, Integer version) {
         try {
-            String key = String.format("%s:accepted:%s:%s:%d", userConsentCachePrefix, userId, consentDocumentId, version);
+            String key = acceptedKey(userId, consentDocumentId, version);
             String value = redisTemplate.opsForValue().get(key);
             if (value == null || value.isBlank()) {
                 return null;
@@ -93,7 +93,7 @@ public class UserConsentCacheService implements UserConsentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void cacheHasAccepted(UUID userId, UUID consentDocumentId, Integer version, Boolean accepted) {
         try {
-            String key = String.format("%s:accepted:%s:%s:%d", userConsentCachePrefix, userId, consentDocumentId, version);
+            String key = acceptedKey(userId, consentDocumentId, version);
             redisTemplate.opsForValue().set(key, String.valueOf(accepted), userConsentTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.warn("Erro ao cachear aceite: userId={}, consentDocumentId={}, version={}", userId, consentDocumentId, version, e);
@@ -104,7 +104,7 @@ public class UserConsentCacheService implements UserConsentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void removeHasAccepted(UUID userId, UUID consentDocumentId, Integer version) {
         try {
-            String key = String.format("%s:accepted:%s:%s:%d", userConsentCachePrefix, userId, consentDocumentId, version);
+            String key = acceptedKey(userId, consentDocumentId, version);
             redisTemplate.delete(key);
         } catch (Exception e) {
             log.warn("Erro ao remover aceite do cache: userId={}, consentDocumentId={}, version={}", userId, consentDocumentId, version, e);
@@ -117,7 +117,7 @@ public class UserConsentCacheService implements UserConsentCachePort {
     @Retry(name = "redisCache")
     public List<UserConsentViewDTO> getByUserId(UUID userId) {
         try {
-            String key = String.format("%s:user:%s", userConsentCachePrefix, userId);
+            String key = userKey(userId);
             String value = redisTemplate.opsForValue().get(key);
             if (value == null || value.isBlank()) {
                 return null;
@@ -133,7 +133,7 @@ public class UserConsentCacheService implements UserConsentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void cacheByUserId(UUID userId, List<UserConsentViewDTO> consents) {
         try {
-            String key = String.format("%s:user:%s", userConsentCachePrefix, userId);
+            String key = userKey(userId);
             String value = objectMapper.writeValueAsString(consents);
             redisTemplate.opsForValue().set(key, value, userConsentTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -145,7 +145,7 @@ public class UserConsentCacheService implements UserConsentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void removeByUserId(UUID userId) {
         try {
-            String key = String.format("%s:user:%s", userConsentCachePrefix, userId);
+            String key = userKey(userId);
             redisTemplate.delete(key);
         } catch (Exception e) {
             log.warn("Erro ao remover consentimentos do cache por userId: {}", userId, e);
@@ -157,7 +157,7 @@ public class UserConsentCacheService implements UserConsentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void clearAll() {
         try {
-            String pattern = userConsentCachePrefix + ":*";
+            String pattern = basePrefix() + ":*";
             var keys = redisTemplate.keys(pattern);
             if (keys != null && !keys.isEmpty()) {
                 var deletedCount = redisTemplate.delete(keys);
@@ -182,6 +182,25 @@ public class UserConsentCacheService implements UserConsentCachePort {
     private List<UserConsentViewDTO> getByUserIdFallback(UUID userId, Exception ex) {
         log.warn("FALLBACK: Redis indisponível para getByUserId");
         return null;
+    }
+
+    private String basePrefix() {
+        if (userConsentCachePrefix == null || userConsentCachePrefix.isBlank()) {
+            return "user_consent_cache";
+        }
+        return userConsentCachePrefix.replaceAll(":+$", "");
+    }
+
+    private String latestKey(UUID userId, UUID consentDocumentId) {
+        return basePrefix() + ":latest:" + userId + ":" + consentDocumentId;
+    }
+
+    private String acceptedKey(UUID userId, UUID consentDocumentId, Integer version) {
+        return basePrefix() + ":accepted:" + userId + ":" + consentDocumentId + ":" + version;
+    }
+
+    private String userKey(UUID userId) {
+        return basePrefix() + ":user:" + userId;
     }
 }
 

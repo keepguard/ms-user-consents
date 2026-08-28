@@ -38,7 +38,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @Retry(name = "redisCache")
     public ConsentDocumentViewDTO getById(UUID id) {
         try {
-            String key = String.format("%s:id:%s", consentDocumentCachePrefix, id);
+            String key = idKey(id);
             String value = redisTemplate.opsForValue().get(key);
             if (value == null || value.isBlank()) {
                 return null;
@@ -54,7 +54,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void cacheById(UUID id, ConsentDocumentViewDTO document) {
         try {
-            String key = String.format("%s:id:%s", consentDocumentCachePrefix, id);
+            String key = idKey(id);
             String value = objectMapper.writeValueAsString(document);
             redisTemplate.opsForValue().set(key, value, consentDocumentTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -66,7 +66,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void removeById(UUID id) {
         try {
-            String key = String.format("%s:id:%s", consentDocumentCachePrefix, id);
+            String key = idKey(id);
             redisTemplate.delete(key);
         } catch (Exception e) {
             log.warn("Erro ao remover documento do cache por ID: {}", id, e);
@@ -79,7 +79,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @Retry(name = "redisCache")
     public ConsentDocumentViewDTO getLatestPublishedByType(ConsentType type) {
         try {
-            String key = String.format("%s:latest_published:%s", consentDocumentCachePrefix, type);
+            String key = latestPublishedKey(type);
             String value = redisTemplate.opsForValue().get(key);
             if (value == null || value.isBlank()) {
                 return null;
@@ -95,7 +95,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void cacheLatestPublishedByType(ConsentType type, ConsentDocumentViewDTO document) {
         try {
-            String key = String.format("%s:latest_published:%s", consentDocumentCachePrefix, type);
+            String key = latestPublishedKey(type);
             String value = objectMapper.writeValueAsString(document);
             redisTemplate.opsForValue().set(key, value, consentDocumentTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -107,7 +107,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void removeLatestPublishedByType(ConsentType type) {
         try {
-            String key = String.format("%s:latest_published:%s", consentDocumentCachePrefix, type);
+            String key = latestPublishedKey(type);
             redisTemplate.delete(key);
         } catch (Exception e) {
             log.warn("Erro ao remover documento do cache por tipo: {}", type, e);
@@ -120,7 +120,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @Retry(name = "redisCache")
     public List<ConsentDocumentViewDTO> getAllPublished() {
         try {
-            String key = String.format("%s:all_published", consentDocumentCachePrefix);
+            String key = allPublishedKey();
             String value = redisTemplate.opsForValue().get(key);
             if (value == null || value.isBlank()) {
                 return null;
@@ -136,7 +136,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void cacheAllPublished(List<ConsentDocumentViewDTO> documents) {
         try {
-            String key = String.format("%s:all_published", consentDocumentCachePrefix);
+            String key = allPublishedKey();
             String value = objectMapper.writeValueAsString(documents);
             redisTemplate.opsForValue().set(key, value, consentDocumentTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -148,7 +148,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void removeAllPublished() {
         try {
-            String key = String.format("%s:all_published", consentDocumentCachePrefix);
+            String key = allPublishedKey();
             redisTemplate.delete(key);
         } catch (Exception e) {
             log.warn("Erro ao remover documentos publicados do cache", e);
@@ -161,7 +161,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @Retry(name = "redisCache")
     public List<ConsentDocumentViewDTO> getByStatus(ConsentDocumentStatus status) {
         try {
-            String key = String.format("%s:status:%s", consentDocumentCachePrefix, status);
+            String key = statusKey(status);
             String value = redisTemplate.opsForValue().get(key);
             if (value == null || value.isBlank()) {
                 return null;
@@ -177,7 +177,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void cacheByStatus(ConsentDocumentStatus status, List<ConsentDocumentViewDTO> documents) {
         try {
-            String key = String.format("%s:status:%s", consentDocumentCachePrefix, status);
+            String key = statusKey(status);
             String value = objectMapper.writeValueAsString(documents);
             redisTemplate.opsForValue().set(key, value, consentDocumentTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -189,7 +189,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void removeByStatus(ConsentDocumentStatus status) {
         try {
-            String key = String.format("%s:status:%s", consentDocumentCachePrefix, status);
+            String key = statusKey(status);
             redisTemplate.delete(key);
         } catch (Exception e) {
             log.warn("Erro ao remover documentos do cache por status: {}", status, e);
@@ -202,7 +202,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @Retry(name = "redisCache")
     public List<ConsentDocumentViewDTO> getByType(ConsentType type) {
         try {
-            String key = String.format("%s:type:%s", consentDocumentCachePrefix, type);
+            String key = typeKey(type);
             String value = redisTemplate.opsForValue().get(key);
             if (value == null || value.isBlank()) {
                 return null;
@@ -218,7 +218,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void cacheByType(ConsentType type, List<ConsentDocumentViewDTO> documents) {
         try {
-            String key = String.format("%s:type:%s", consentDocumentCachePrefix, type);
+            String key = typeKey(type);
             String value = objectMapper.writeValueAsString(documents);
             redisTemplate.opsForValue().set(key, value, consentDocumentTtlSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
@@ -230,7 +230,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void removeByType(ConsentType type) {
         try {
-            String key = String.format("%s:type:%s", consentDocumentCachePrefix, type);
+            String key = typeKey(type);
             redisTemplate.delete(key);
         } catch (Exception e) {
             log.warn("Erro ao remover documentos do cache por tipo: {}", type, e);
@@ -242,7 +242,7 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     @CircuitBreaker(name = "redisCache")
     public void clearAll() {
         try {
-            String pattern = consentDocumentCachePrefix + ":*";
+            String pattern = basePrefix() + ":*";
             var keys = redisTemplate.keys(pattern);
             if (keys != null && !keys.isEmpty()) {
                 var deletedCount = redisTemplate.delete(keys);
@@ -277,6 +277,37 @@ public class ConsentDocumentCacheService implements ConsentDocumentCachePort {
     private List<ConsentDocumentViewDTO> getByTypeFallback(ConsentType type, Exception ex) {
         log.warn("FALLBACK: Redis indisponível para getByType");
         return null;
+    }
+
+    private String basePrefix() {
+        if (consentDocumentCachePrefix == null || consentDocumentCachePrefix.isBlank()) {
+            return "consent_doc_cache";
+        }
+        return consentDocumentCachePrefix.replaceAll(":+$", "");
+    }
+
+    private String idKey(UUID id) {
+        return basePrefix() + ":id:" + id;
+    }
+
+    private String latestPublishedKey(ConsentType type) {
+        return basePrefix() + ":latest_published:" + enumName(type);
+    }
+
+    private String allPublishedKey() {
+        return basePrefix() + ":all_published";
+    }
+
+    private String statusKey(ConsentDocumentStatus status) {
+        return basePrefix() + ":status:" + enumName(status);
+    }
+
+    private String typeKey(ConsentType type) {
+        return basePrefix() + ":type:" + enumName(type);
+    }
+
+    private String enumName(Enum<?> value) {
+        return value == null ? "" : value.name().toLowerCase();
     }
 }
 
