@@ -17,7 +17,7 @@ import java.util.List;
 public class SwaggerConfig {
 
     private static final String SECURITY_SCHEME_NAME = "bearerAuth";
-    private static final String X_APPLICATION_HEADER = "X-Tenant-Id";
+    private static final String TENANT_ID_HEADER = "X-Tenant-Id";
 
     @Bean
     public OpenAPI customOpenAPI() {
@@ -51,14 +51,14 @@ public class SwaggerConfig {
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
                                 .description("Informe o token JWT gerado pelo ms-auth"))
-                        .addSecuritySchemes(X_APPLICATION_HEADER, new SecurityScheme()
-                                .name(X_APPLICATION_HEADER)
+                        .addSecuritySchemes(TENANT_ID_HEADER, new SecurityScheme()
+                                .name(TENANT_ID_HEADER)
                                 .type(SecurityScheme.Type.APIKEY)
                                 .in(SecurityScheme.In.HEADER)
                                 .description("UUID da aplicação que está consumindo a API")))
                 .addSecurityItem(new SecurityRequirement()
                         .addList(SECURITY_SCHEME_NAME)
-                        .addList(X_APPLICATION_HEADER));
+                        .addList(TENANT_ID_HEADER));
     }
 }
 
