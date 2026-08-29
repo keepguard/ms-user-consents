@@ -24,3 +24,7 @@ storage:
   minio:
     endpoint: http://minio:9000
 
+keepguard:
+  audit:
+    exchange: srv-audit-exchange-dev
+

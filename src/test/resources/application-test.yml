@@ -19,6 +19,9 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
 
 minio:
   endpoint: http://localhost:9000
@@ -40,4 +43,8 @@ management:
     export:
       prometheus:
         enabled: true
+
+keepguard:
+  audit:
+    enabled: false
 

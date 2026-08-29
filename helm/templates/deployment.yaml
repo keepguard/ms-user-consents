@@ -50,6 +50,24 @@ spec:
           value: {{ .Values.env.redisHost | quote }}
         - name: SPRING_DATA_REDIS_PORT
           value: {{ .Values.env.redisPort | quote }}
+        - name: SPRING_RABBITMQ_HOST
+          value: {{ .Values.env.rabbitmqHost | quote }}
+        - name: SPRING_RABBITMQ_PORT
+          value: {{ .Values.env.rabbitmqPort | quote }}
+        - name: RABBITMQ_HOST
+          value: {{ .Values.env.rabbitmqHost | quote }}
+        - name: RABBITMQ_PORT
+          value: {{ .Values.env.rabbitmqPort | quote }}
+        - name: SPRING_RABBITMQ_USERNAME
+          valueFrom:
+            configMapKeyRef:
+              name: keepguard-config
+              key: RABBITMQ_DEFAULT_USER
+        - name: SPRING_RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keepguard-secret
+              key: RABBITMQ_DEFAULT_PASS
         - name: KEEPGUARD_VALIDATION_MODERATION_ENABLED
           value: "false"
         ports:

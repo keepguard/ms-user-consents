@@ -24,6 +24,11 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
       connection-test-query: SELECT 1
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:${RABBITMQ_DEFAULT_USER:guest}}
+    password: ${RABBITMQ_PASSWORD:${RABBITMQ_DEFAULT_PASS:guest}}
   data:
     redis:
       timeout: 3000ms
@@ -141,4 +146,11 @@ springdoc:
     enabled: true
   api-docs:
     enabled: true
+
+keepguard:
+  audit:
+    enabled: true
+    exchange: srv-audit-exchange-local
+    routing-key: audit.event
+    source-service: ms-user-consents
 

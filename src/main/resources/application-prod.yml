@@ -33,3 +33,7 @@ logging:
     port: ${LOGGING_LOGSTASH_PORT:5000}
     enabled: ${LOGGING_LOGSTASH_ENABLED:true}
 
+keepguard:
+  audit:
+    exchange: srv-audit-exchange-prod
+
