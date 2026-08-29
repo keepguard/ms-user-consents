@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.keepguard</groupId>
 	<artifactId>ms-user-consents</artifactId>
-	<version>1.0.6</version>
+	<version>1.0.7</version>
 	<name>ms-user-consents</name>
 	<description>User Consents Management Service with MinIO Storage</description>
 	

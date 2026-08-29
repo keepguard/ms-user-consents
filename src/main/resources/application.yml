@@ -150,7 +150,7 @@ springdoc:
 keepguard:
   audit:
     enabled: true
-    exchange: srv-audit-exchange-local
+    exchange: ${KEEPGUARD_AUDIT_EXCHANGE:srv-audit-exchange-local}
     routing-key: audit.event
     source-service: ms-user-consents
 

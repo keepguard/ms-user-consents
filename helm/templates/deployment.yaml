@@ -58,6 +58,8 @@ spec:
           value: {{ .Values.env.rabbitmqHost | quote }}
         - name: RABBITMQ_PORT
           value: {{ .Values.env.rabbitmqPort | quote }}
+        - name: KEEPGUARD_AUDIT_EXCHANGE
+          value: "srv-audit-exchange-prod"
         - name: SPRING_RABBITMQ_USERNAME
           valueFrom:
             configMapKeyRef:
