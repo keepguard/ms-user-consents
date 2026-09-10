@@ -14,11 +14,16 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UserConsentResponseDTO {
     private UUID id;
+    private UUID companyId;
+    private UUID tenantId;
     private UUID userId;
     private String email;
     private UUID consentDocumentId;
     private Integer version;
+    private com.keepguard.ms_user_consents.domain.enums.UserConsentStatus status;
     private LocalDateTime acceptedAt;
+    private LocalDateTime revokedAt;
+    private String revocationReason;
     private LocalDateTime createdAt;
     private String ipAddress;
     private String userAgent;

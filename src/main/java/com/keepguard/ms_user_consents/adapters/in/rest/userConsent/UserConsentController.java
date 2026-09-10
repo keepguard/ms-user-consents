@@ -7,6 +7,7 @@ import com.keepguard.ms_user_consents.adapters.in.rest.userConsent.dto.response.
 import com.keepguard.ms_user_consents.adapters.in.rest.userConsent.mapper.UserConsentAdapterMapper;
 import com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptAllCommandDTO;
 import com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentCreateCommandDTO;
+import com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentViewDTO;
 import com.keepguard.ms_user_consents.application.port.in.UserConsentPort;
 import com.keepguard.lib_common.utils.ValidationUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -56,13 +58,12 @@ public class UserConsentController {
         log.info("POST /api/v1/user-consents/accept - User: {}, Document: {}, Application: {}",
                 request.getUserId(), request.getConsentDocumentId(), companyId);
 
-        // Valida o X-Company-Id
-
         // Captura informações de auditoria
         String ipAddress = getClientIpAddress(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
 
         var command = UserConsentCreateCommandDTO.builder()
+                .companyId(companyId)
                 .userId(request.getUserId())
                 .email(request.getEmail())
                 .consentDocumentId(request.getConsentDocumentId())
@@ -104,13 +105,12 @@ public class UserConsentController {
         log.info("POST /api/v1/user-consents/accept-all - User: {}, Application: {}",
                 request.getUserId(), companyId);
 
-        // Valida o X-Company-Id
-
         // Captura informações de auditoria
         String ipAddress = getClientIpAddress(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
 
         var command = UserConsentAcceptAllCommandDTO.builder()
+                .companyId(companyId)
                 .userId(request.getUserId())
                 .email(request.getEmail())
                 .acceptedAt(request.getAcceptedAt())
@@ -149,8 +149,6 @@ public class UserConsentController {
         log.info("POST /api/v1/user-consents/accept-batch - User: {}, Total itens: {}, Application: {}",
                 request.getUserId(), request.getConsents().size(), companyId);
 
-        // Valida o X-Company-Id
-
         // Captura informações de auditoria
         String ipAddress = getClientIpAddress(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
@@ -165,6 +163,7 @@ public class UserConsentController {
                 .toList();
 
         var command = com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptBatchCommandDTO.builder()
+                .companyId(companyId)
                 .userId(request.getUserId())
                 .email(request.getEmail())
                 .acceptedAt(request.getAcceptedAt())
@@ -183,13 +182,50 @@ public class UserConsentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PostMapping("/revoke")
+    @Operation(
+        summary = "Revogar consentimento do usuário",
+        description = "Revoga um consentimento previamente concedido. Documentos obrigatórios não podem ser revogados individualmente sem o encerramento da conta."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Consentimento revogado com sucesso"),
+        @ApiResponse(responseCode = "400", description = "Tentativa de revogar documento obrigatório ou dados inválidos"),
+        @ApiResponse(responseCode = "404", description = "Consentimento ou documento não encontrado"),
+        @ApiResponse(responseCode = "401", description = "Aplicação não autorizada"),
+        @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    public ResponseEntity<UserConsentResponseDTO> revoke(
+            @Valid @RequestBody com.keepguard.ms_user_consents.adapters.in.rest.userConsent.dto.request.UserConsentRevokeRequestDTO request,
+            @Parameter(description = "UUID da empresa", required = true)
+            @RequestHeader("X-Company-Id") UUID companyId
+    ) {
+        log.info("POST /api/v1/user-consents/revoke - User: {}, Document: {}, Application: {}",
+                request.getUserId(), request.getConsentDocumentId(), companyId);
+
+        var command = com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentRevokeCommandDTO.builder()
+                .companyId(companyId)
+                .userId(request.getUserId())
+                .consentDocumentId(request.getConsentDocumentId())
+                .reason(request.getReason())
+                .build();
+
+        var revoked = userConsentPort.revoke(command);
+        var response = mapper.toResponseDTO(revoked);
+
+        log.info("Consentimento revogado com sucesso - User: {}, Document: {}, Application: {}",
+                request.getUserId(), request.getConsentDocumentId(), companyId);
+
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{id}")
     @Operation(
         summary = "Buscar consentimento por ID",
-        description = "Busca um consentimento específico pelo seu ID único."
+        description = "Busca um consentimento específico pelo seu ID único. Aplica isolamento multi-tenant via X-Company-Id."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Consentimento encontrado com sucesso"),
+        @ApiResponse(responseCode = "403", description = "Consentimento pertence a outro tenant"),
         @ApiResponse(responseCode = "404", description = "Consentimento não encontrado"),
         @ApiResponse(responseCode = "401", description = "Aplicação não autorizada"),
         @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
@@ -200,18 +236,19 @@ public class UserConsentController {
             @RequestHeader("X-Company-Id") UUID companyId) {
         log.info("GET /api/v1/user-consents/{} - Application: {}", id, companyId);
 
-        // Valida o X-Company-Id
-
         var consent = userConsentPort.findById(id);
-        var response = mapper.toResponseDTO(consent);
 
+        // Isolamento multi-tenant: rejeita acesso cross-tenant (LGPD Gap 4)
+        enforceTenantIsolation(consent, companyId);
+
+        var response = mapper.toResponseDTO(consent);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{userId}")
     @Operation(
         summary = "Buscar todos os consentimentos de um usuário",
-        description = "Retorna todos os consentimentos registrados para um usuário específico."
+        description = "Retorna todos os consentimentos registrados para um usuário específico, filtrados pelo tenant do solicitante."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista de consentimentos encontrada com sucesso"),
@@ -224,10 +261,12 @@ public class UserConsentController {
             @RequestHeader("X-Company-Id") UUID companyId) {
         log.info("GET /api/v1/user-consents/user/{} - Application: {}", userId, companyId);
 
-        // Valida o X-Company-Id
-
         var consents = userConsentPort.findByUserId(userId);
+
+        // Isolamento multi-tenant: filtra apenas consentimentos do tenant solicitante (LGPD Gap 4)
+        // Consents legados (companyId == null) são incluídos por compatibilidade retroativa
         var responses = consents.stream()
+                .filter(c -> c.getCompanyId() == null || companyId.equals(c.getCompanyId()))
                 .map(mapper::toResponseDTO)
                 .toList();
 
@@ -237,7 +276,7 @@ public class UserConsentController {
     @GetMapping("/user/{userId}/document/{consentDocumentId}")
     @Operation(
         summary = "Buscar consentimentos de um usuário para um documento específico",
-        description = "Retorna todos os consentimentos de um usuário para um documento de consentimento específico."
+        description = "Retorna todos os consentimentos de um usuário para um documento de consentimento específico, filtrados pelo tenant."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista de consentimentos encontrada com sucesso"),
@@ -252,10 +291,12 @@ public class UserConsentController {
     ) {
         log.info("GET /api/v1/user-consents/user/{}/document/{} - Application: {}", userId, consentDocumentId, companyId);
 
-        // Valida o X-Company-Id
-
         var consents = userConsentPort.findByUserIdAndConsentDocumentId(userId, consentDocumentId);
+
+        // Isolamento multi-tenant: filtra apenas consentimentos do tenant solicitante (LGPD Gap 4)
+        // Consents legados (companyId == null) são incluídos por compatibilidade retroativa
         var responses = consents.stream()
+                .filter(c -> c.getCompanyId() == null || companyId.equals(c.getCompanyId()))
                 .map(mapper::toResponseDTO)
                 .toList();
 
@@ -265,10 +306,11 @@ public class UserConsentController {
     @GetMapping("/user/{userId}/document/{consentDocumentId}/latest")
     @Operation(
         summary = "Buscar último consentimento de um usuário para um documento",
-        description = "Retorna o último consentimento registrado de um usuário para um documento específico."
+        description = "Retorna o último consentimento registrado de um usuário para um documento específico. Aplica isolamento multi-tenant."
     )
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Último consentimento encontrado com sucesso"),
+        @ApiResponse(responseCode = "403", description = "Consentimento pertence a outro tenant"),
         @ApiResponse(responseCode = "404", description = "Nenhum consentimento encontrado"),
         @ApiResponse(responseCode = "401", description = "Aplicação não autorizada"),
         @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
@@ -281,11 +323,12 @@ public class UserConsentController {
     ) {
         log.info("GET /api/v1/user-consents/user/{}/document/{}/latest - Application: {}", userId, consentDocumentId, companyId);
 
-        // Valida o X-Company-Id
-
         var consent = userConsentPort.findLatestByUserIdAndConsentDocumentId(userId, consentDocumentId);
-        var response = mapper.toResponseDTO(consent);
 
+        // Isolamento multi-tenant: rejeita acesso cross-tenant (LGPD Gap 4)
+        enforceTenantIsolation(consent, companyId);
+
+        var response = mapper.toResponseDTO(consent);
         return ResponseEntity.ok(response);
     }
 
@@ -307,8 +350,6 @@ public class UserConsentController {
             @RequestHeader("X-Company-Id") UUID companyId
     ) {
         log.info("GET /api/v1/user-consents/user/{}/document/{}/version/{}/check - Application: {}", userId, consentDocumentId, version, companyId);
-
-        // Valida o X-Company-Id
 
         boolean hasAccepted = userConsentPort.hasAccepted(userId, consentDocumentId, version);
 
@@ -332,13 +373,36 @@ public class UserConsentController {
             @RequestHeader("X-Company-Id") UUID companyId) {
         log.info("DELETE /api/v1/user-consents/user/{} - Application: {}", userId, companyId);
 
-        // Valida o X-Company-Id
-
         userConsentPort.deleteAllByUserId(userId);
 
         log.info("Todos os consentimentos deletados com sucesso para usuário: {} - Application: {}", userId, companyId);
 
         return ResponseEntity.noContent().build();
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Multi-Tenant Isolation — LGPD Gap 4: Isolamento por company_id
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * Verifica se o consentimento pertence ao tenant da requisição (X-Company-Id).
+     * Retorna 403 Forbidden se o companyId do consentimento não corresponder
+     * ao tenant do solicitante, impedindo vazamento inter-tenant (LGPD Art. 46).
+     *
+     * <p>Consentimentos legados (sem companyId preenchido) são permitidos por
+     * compatibilidade retroativa, evitando quebra de dados migrados.</p>
+     */
+    private void enforceTenantIsolation(UserConsentViewDTO consent, UUID requestCompanyId) {
+        if (consent == null || consent.getCompanyId() == null) {
+            // Dados legados sem companyId: permite acesso por compatibilidade
+            return;
+        }
+        if (!requestCompanyId.equals(consent.getCompanyId())) {
+            log.warn("Tentativa de acesso cross-tenant bloqueada: consent.companyId={}, request.companyId={}",
+                    consent.getCompanyId(), requestCompanyId);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Acesso negado: consentimento pertence a outro tenant");
+        }
     }
 
     private String getClientIpAddress(HttpServletRequest request) {

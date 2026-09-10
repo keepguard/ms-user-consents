@@ -78,6 +78,13 @@ public class UserConsentUseCaseService implements UserConsentPort {
 
     @Override
     @Transactional
+    public UserConsentViewDTO revoke(com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentRevokeCommandDTO command) {
+        var revoked = commandService.revoke(command);
+        return mapper.toViewDTO(revoked);
+    }
+
+    @Override
+    @Transactional
     public void deleteAllByUserId(UUID userId) {
         commandService.deleteAllByUserId(userId);
     }

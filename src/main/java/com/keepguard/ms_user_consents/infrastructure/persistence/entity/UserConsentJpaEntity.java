@@ -1,5 +1,6 @@
 package com.keepguard.ms_user_consents.infrastructure.persistence.entity;
 
+import com.keepguard.ms_user_consents.domain.enums.UserConsentStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,7 +13,13 @@ import java.util.UUID;
 import org.springframework.data.domain.Persistable;
 
 @Entity
-@Table(name = "user_consents", schema = "ms_user_consents")
+@Table(
+    name = "user_consents",
+    schema = "ms_user_consents",
+    indexes = {
+        @Index(name = "idx_user_consents_company_user_doc", columnList = "company_id, user_id, consent_document_id")
+    }
+)
 @Data
 @Builder
 @NoArgsConstructor
@@ -31,6 +38,12 @@ public class UserConsentJpaEntity implements Persistable<UUID> {
         return isNew || createdAt == null;
     }
 
+    @Column(name = "company_id")
+    private UUID companyId;
+
+    @Column(name = "tenant_id")
+    private UUID tenantId;
+
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
@@ -43,8 +56,19 @@ public class UserConsentJpaEntity implements Persistable<UUID> {
     @Column(name = "version", nullable = false)
     private Integer version;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private UserConsentStatus status = UserConsentStatus.ACCEPTED;
+
     @Column(name = "accepted_at", nullable = false)
     private LocalDateTime acceptedAt;
+
+    @Column(name = "revoked_at")
+    private LocalDateTime revokedAt;
+
+    @Column(name = "revocation_reason", length = 255)
+    private String revocationReason;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

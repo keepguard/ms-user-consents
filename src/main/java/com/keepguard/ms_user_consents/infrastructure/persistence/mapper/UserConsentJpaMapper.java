@@ -10,11 +10,16 @@ public class UserConsentJpaMapper {
     public UserConsent toDomain(UserConsentJpaEntity entity) {
         return UserConsent.fromJpa(
                 entity.getId(),
+                entity.getCompanyId(),
+                entity.getTenantId(),
                 entity.getUserId(),
                 entity.getEmail(),
                 entity.getConsentDocumentId(),
                 entity.getVersion(),
+                entity.getStatus(),
                 entity.getAcceptedAt(),
+                entity.getRevokedAt(),
+                entity.getRevocationReason(),
                 entity.getCreatedAt(),
                 entity.getIpAddress(),
                 entity.getUserAgent(),
@@ -25,11 +30,16 @@ public class UserConsentJpaMapper {
     public UserConsentJpaEntity toEntity(UserConsent domain) {
         return UserConsentJpaEntity.builder()
                 .id(domain.getId())
+                .companyId(domain.getCompanyId())
+                .tenantId(domain.getTenantId())
                 .userId(domain.getUserId())
                 .email(domain.getEmail())
                 .consentDocumentId(domain.getConsentDocumentId())
                 .version(domain.getVersion())
+                .status(domain.getStatus())
                 .acceptedAt(domain.getAcceptedAt())
+                .revokedAt(domain.getRevokedAt())
+                .revocationReason(domain.getRevocationReason())
                 .createdAt(domain.getCreatedAt())
                 .ipAddress(domain.getIpAddress())
                 .userAgent(domain.getUserAgent())

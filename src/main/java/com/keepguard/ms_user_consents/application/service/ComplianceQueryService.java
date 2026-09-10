@@ -9,6 +9,7 @@ import com.keepguard.ms_user_consents.application.port.out.persistence.UserConse
 import com.keepguard.ms_user_consents.domain.entity.ConsentDocument;
 import com.keepguard.ms_user_consents.domain.enums.ConsentDocumentStatus;
 import com.keepguard.ms_user_consents.domain.enums.ConsentType;
+import com.keepguard.ms_user_consents.domain.enums.UserConsentStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,8 +48,9 @@ public class ComplianceQueryService {
         // Busca todos os consentimentos do usuário
         var userConsents = userConsentRepository.findByUserId(userId);
 
-        // Mapeia consentimentos do usuário por documentId
-        Map<UUID, Boolean> userConsentsMap = userConsents.stream()
+        // Mapeia consentimentos ativos (ACCEPTED e não revogados) do usuário por documentId
+        Map<UUID, Boolean> activeConsentsMap = userConsents.stream()
+                .filter(consent -> consent.getStatus() == UserConsentStatus.ACCEPTED && consent.getRevokedAt() == null)
                 .collect(Collectors.toMap(
                         consent -> consent.getConsentDocumentId(),
                         consent -> true,
@@ -61,10 +63,12 @@ public class ComplianceQueryService {
                         .documentId(doc.getId())
                         .type(doc.getType())
                         .version(doc.getVersion())
-                        .accepted(userConsentsMap.containsKey(doc.getId()))
-                        .acceptedAt(userConsentsMap.containsKey(doc.getId()) ?
+                        .accepted(activeConsentsMap.containsKey(doc.getId()))
+                        .acceptedAt(activeConsentsMap.containsKey(doc.getId()) ?
                                 userConsents.stream()
-                                        .filter(c -> c.getConsentDocumentId().equals(doc.getId()))
+                                        .filter(c -> c.getConsentDocumentId().equals(doc.getId()) 
+                                                && c.getStatus() == UserConsentStatus.ACCEPTED 
+                                                && c.getRevokedAt() == null)
                                         .findFirst()
                                         .map(c -> c.getAcceptedAt())
                                         .orElse(null) : null)
@@ -90,11 +94,11 @@ public class ComplianceQueryService {
         // Cacheia o resultado
         cachePort.cacheUserCompliance(userId, result);
         
-        // Métricas
+        // Métricas sanitizadas (sem PII de user_id)
         metricsPort.incrementCounter("compliance_queries_total",
             Map.of("query_type", "CHECK_USER_COMPLIANCE", "status", "SUCCESS"));
         metricsPort.incrementCounter("compliance_status_total",
-            Map.of("user_id", userId.toString(), "compliant", String.valueOf(result.isCompliant())));
+            Map.of("compliant", String.valueOf(result.isCompliant())));
 
         return result;
     }
@@ -139,4 +143,3 @@ public class ComplianceQueryService {
                 .toList();
     }
 }
-

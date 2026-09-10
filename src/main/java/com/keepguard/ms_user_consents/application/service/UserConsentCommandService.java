@@ -3,24 +3,29 @@ package com.keepguard.ms_user_consents.application.service;
 import com.keepguard.lib_common.logging.annotation.LogOperation;
 import com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptAllCommandDTO;
 import com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptAllResultDTO;
+import com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptBatchCommandDTO;
 import com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentCreateCommandDTO;
+import com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentRevokeCommandDTO;
+import com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentViewDTO;
 import com.keepguard.ms_user_consents.application.port.out.cache.ComplianceCachePort;
 import com.keepguard.ms_user_consents.application.port.out.cache.UserConsentCachePort;
 import com.keepguard.ms_user_consents.application.port.out.metrics.MetricsPort;
 import com.keepguard.ms_user_consents.application.port.out.persistence.ConsentDocumentRepositoryPort;
 import com.keepguard.ms_user_consents.application.port.out.persistence.UserConsentRepositoryPort;
 import com.keepguard.ms_user_consents.application.service.exception.AlreadyExistsException;
+import com.keepguard.ms_user_consents.application.service.exception.NotFoundException;
 import com.keepguard.ms_user_consents.domain.entity.ConsentDocument;
 import com.keepguard.ms_user_consents.domain.entity.UserConsent;
+import com.keepguard.ms_user_consents.domain.enums.UserConsentStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -59,8 +64,10 @@ public class UserConsentCommandService {
             throw new AlreadyExistsException("Usuário já aceitou esta versão do documento");
         }
 
-        // Cria novo aceite
+        // Cria novo aceite com tenant e status ACCEPTED
         UserConsent consent = UserConsent.accept(
+                command.getCompanyId(),
+                command.getTenantId(),
                 command.getUserId(),
                 command.getEmail(),
                 command.getConsentDocumentId(),
@@ -76,16 +83,16 @@ public class UserConsentCommandService {
         // Invalida cache relacionado
         invalidateCacheAfterAccept(saved);
         
-        // Métricas
+        // Métricas sanitizadas (sem PII de user_id)
         metricsPort.incrementCounter("user_consent_accepted_total",
-            Map.of("entity_id", saved.getId().toString(), "user_id", saved.getUserId().toString()));
+            Map.of("status", "SUCCESS"));
         
         return saved;
     }
 
     // Métodos de invalidação de cache
     private void invalidateCacheAfterAccept(UserConsent consent) {
-        log.debug("Invalidando cache após aceitar consentimento: userId={}, consentDocumentId={}, version={}",
+        log.debug("Invalidando cache após atualizar consentimento: userId={}, consentDocumentId={}, version={}",
                 consent.getUserId(), consent.getConsentDocumentId(), consent.getVersion());
         
         // Invalida cache de consentimentos do usuário
@@ -120,7 +127,7 @@ public class UserConsentCommandService {
         if (publishedDocuments.isEmpty()) {
             log.info("Nenhum documento publicado encontrado para aceite - User: {}", command.getUserId());
             metricsPort.incrementCounter("user_consent_accept_all_total",
-                Map.of("user_id", command.getUserId().toString(), "status", "NO_DOCUMENTS"));
+                Map.of("status", "NO_DOCUMENTS"));
             return UserConsentAcceptAllResultDTO.builder()
                     .acceptedConsents(new ArrayList<>())
                     .build();
@@ -147,6 +154,8 @@ public class UserConsentCommandService {
             
             // Criar aceite para este documento
             UserConsent consent = UserConsent.accept(
+                    command.getCompanyId(),
+                    command.getTenantId(),
                     command.getUserId(),
                     command.getEmail(),
                     document.getId(),
@@ -167,15 +176,15 @@ public class UserConsentCommandService {
         // Invalidar caches relacionados após todos os aceites
         invalidateCacheAfterAcceptAll(command.getUserId(), acceptedConsents);
         
-        // Métricas
+        // Métricas sanitizadas (sem PII de user_id)
         metricsPort.incrementCounter("user_consent_accept_all_total",
-            Map.of("user_id", command.getUserId().toString(), "status", "SUCCESS"));
+            Map.of("status", "SUCCESS"));
         metricsPort.incrementCounter("user_consent_accepted_batch_total",
-            Map.of("user_id", command.getUserId().toString(), "accepted_count", String.valueOf(acceptedConsents.size())));
+            Map.of("status", "SUCCESS"));
         
         if (ignoredCount > 0) {
             metricsPort.incrementCounter("user_consent_ignored_batch_total",
-                Map.of("user_id", command.getUserId().toString(), "ignored_count", String.valueOf(ignoredCount)));
+                Map.of("status", "IGNORED"));
         }
         
         log.info("Aceite em lote concluído - User: {}, Aceitos: {}, Ignorados: {}",
@@ -195,7 +204,7 @@ public class UserConsentCommandService {
         auditAction = "ACCEPT_BATCH",
         auditEntityType = "USER_CONSENT"
     )
-    public UserConsentAcceptAllResultDTO acceptBatch(com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptBatchCommandDTO command) {
+    public UserConsentAcceptAllResultDTO acceptBatch(UserConsentAcceptBatchCommandDTO command) {
         log.info("Registrando aceite seletivo em lote - User: {}, Itens recebidos: {}", 
                 command.getUserId(), command.getConsents().size());
 
@@ -205,17 +214,29 @@ public class UserConsentCommandService {
         for (var item : command.getConsents()) {
             if (!item.isAccepted()) {
                 log.info("Item de consentimento desmarcado/recusado pelo usuário - DocId: {}", item.getDocumentId());
+                // Gap 3: Se o documento for opcional e houver consentimento aceito ativo, revogar
+                var existingConsentOpt = repositoryPort.findLatestByUserIdAndConsentDocumentId(command.getUserId(), item.getDocumentId());
+                if (existingConsentOpt.isPresent() && existingConsentOpt.get().getStatus() != UserConsentStatus.REVOKED) {
+                    var docOpt = consentDocumentRepositoryPort.findById(item.getDocumentId());
+                    if (docOpt.isPresent() && !docOpt.get().getType().isMandatory()) {
+                        UserConsent revoked = existingConsentOpt.get().revoke("Revogado via atualização de preferências em lote");
+                        UserConsent savedRevocation = repositoryPort.save(revoked);
+                        invalidateCacheAfterAccept(savedRevocation);
+                        log.info("Consentimento opcional revogado no aceite em lote - User: {}, DocId: {}", command.getUserId(), item.getDocumentId());
+                    }
+                }
                 ignoredCount++;
                 continue;
             }
 
+            var latestConsentOpt = repositoryPort.findLatestByUserIdAndConsentDocumentId(command.getUserId(), item.getDocumentId());
             boolean alreadyAccepted = repositoryPort.existsByUserIdAndConsentDocumentIdAndVersion(
                     command.getUserId(),
                     item.getDocumentId(),
                     item.getVersion()
             );
 
-            if (alreadyAccepted) {
+            if (alreadyAccepted && latestConsentOpt.isPresent() && latestConsentOpt.get().getStatus() != UserConsentStatus.REVOKED) {
                 log.debug("Usuário {} já aceitou versão {} do documento {} - ignorando",
                         command.getUserId(), item.getVersion(), item.getDocumentId());
                 ignoredCount++;
@@ -223,6 +244,8 @@ public class UserConsentCommandService {
             }
 
             UserConsent consent = UserConsent.accept(
+                    command.getCompanyId(),
+                    command.getTenantId(),
                     command.getUserId(),
                     command.getEmail(),
                     item.getDocumentId(),
@@ -237,9 +260,7 @@ public class UserConsentCommandService {
             acceptedConsents.add(saved);
 
             metricsPort.incrementCounter("user_consent_accepted_total",
-                Map.of("user_id", command.getUserId().toString(), 
-                       "document_id", item.getDocumentId().toString(),
-                       "version", String.valueOf(item.getVersion())));
+                Map.of("status", "SUCCESS"));
         }
 
         invalidateCacheAfterAcceptAll(command.getUserId(), acceptedConsents);
@@ -253,8 +274,52 @@ public class UserConsentCommandService {
                         .toList())
                 .build();
     }
+
+    @LogOperation(
+        operation = "REVOKE_USER_CONSENT",
+        description = "Revogando consentimento para usuário: {command.userId}, documento: {command.consentDocumentId}",
+        audit = true,
+        auditAction = "REVOKE",
+        auditEntityType = "USER_CONSENT"
+    )
+    public UserConsent revoke(UserConsentRevokeCommandDTO command) {
+        log.info("Revogando consentimento - User: {}, Document: {}", command.getUserId(), command.getConsentDocumentId());
+
+        ConsentDocument document = consentDocumentRepositoryPort.findById(command.getConsentDocumentId())
+                .orElseThrow(() -> new NotFoundException("Documento de consentimento não encontrado: " + command.getConsentDocumentId()));
+
+        if (document.getType().isMandatory()) {
+            log.warn("Tentativa de revogar documento obrigatório: {} pelo usuário: {}", document.getType(), command.getUserId());
+            throw new IllegalArgumentException("Documentos obrigatórios não podem ser revogados individualmente sem o encerramento da conta");
+        }
+
+        var latestOpt = repositoryPort.findLatestByUserIdAndConsentDocumentId(command.getUserId(), command.getConsentDocumentId());
+        if (latestOpt.isEmpty()) {
+            throw new NotFoundException("Nenhum consentimento encontrado para o usuário e documento informados");
+        }
+
+        UserConsent current = latestOpt.get();
+        if (current.getStatus() == UserConsentStatus.REVOKED) {
+            log.info("Consentimento já está revogado para usuário: {} e documento: {}", command.getUserId(), command.getConsentDocumentId());
+            return current;
+        }
+
+        String reason = command.getReason() != null && !command.getReason().isBlank() 
+                ? command.getReason() 
+                : "Revogado pelo usuário";
+
+        UserConsent revoked = current.revoke(reason);
+        UserConsent saved = repositoryPort.save(revoked);
+
+        invalidateCacheAfterAccept(saved);
+
+        metricsPort.incrementCounter("user_consent_revoked_total", Map.of("status", "SUCCESS"));
+
+        log.info("Consentimento revogado com sucesso - User: {}, Document: {}", command.getUserId(), command.getConsentDocumentId());
+        return saved;
+    }
     
-    private void invalidateCacheAfterAcceptAll(java.util.UUID userId, List<UserConsent> acceptedConsents) {
+    private void invalidateCacheAfterAcceptAll(UUID userId, List<UserConsent> acceptedConsents) {
         log.debug("Invalidando cache após aceite em lote: userId={}, totalAccepted={}", userId, acceptedConsents.size());
         
         try {
@@ -305,9 +370,9 @@ public class UserConsentCommandService {
         // Invalidar cache relacionado
         invalidateCacheAfterDeleteAll(userId);
         
-        // Métricas
+        // Métricas sanitizadas (sem PII de user_id)
         metricsPort.incrementCounter("user_consent_deleted_all_total",
-            Map.of("user_id", userId.toString(), "deleted_count", String.valueOf(existingConsents.size())));
+            Map.of("status", "SUCCESS"));
         
         log.info("Todos os consentimentos deletados com sucesso para usuário: {} - Total: {}", userId, existingConsents.size());
     }
@@ -326,14 +391,19 @@ public class UserConsentCommandService {
         }
     }
     
-    private com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentViewDTO toViewDTO(UserConsent consent) {
-        return com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentViewDTO.builder()
+    private UserConsentViewDTO toViewDTO(UserConsent consent) {
+        return UserConsentViewDTO.builder()
                 .id(consent.getId())
+                .companyId(consent.getCompanyId())
+                .tenantId(consent.getTenantId())
                 .userId(consent.getUserId())
                 .email(consent.getEmail())
                 .consentDocumentId(consent.getConsentDocumentId())
                 .version(consent.getVersion())
+                .status(consent.getStatus())
                 .acceptedAt(consent.getAcceptedAt())
+                .revokedAt(consent.getRevokedAt())
+                .revocationReason(consent.getRevocationReason())
                 .createdAt(consent.getCreatedAt())
                 .ipAddress(consent.getIpAddress())
                 .userAgent(consent.getUserAgent())
@@ -341,4 +411,3 @@ public class UserConsentCommandService {
                 .build();
     }
 }
-

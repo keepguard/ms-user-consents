@@ -76,7 +76,7 @@ public class UserConsentQueryService {
         UserConsent consent = repositoryPort.findLatestByUserIdAndConsentDocumentId(userId, consentDocumentId)
                 .orElseThrow(() -> {
                     metricsPort.incrementCounter("user_consent_not_found_total",
-                        Map.of("user_id", userId.toString(), "operation", "get_latest_by_user_and_document"));
+                        Map.of("operation", "get_latest_by_user_and_document"));
                     return new RuntimeException(
                             "Nenhum consentimento encontrado para userId: " + userId + " e consentDocumentId: " + consentDocumentId
                     );

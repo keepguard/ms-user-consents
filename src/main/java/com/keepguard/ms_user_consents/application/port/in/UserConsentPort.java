@@ -14,6 +14,7 @@ public interface UserConsentPort {
     UserConsentViewDTO accept(UserConsentCreateCommandDTO command);
     UserConsentAcceptAllResultDTO acceptAll(UserConsentAcceptAllCommandDTO command);
     UserConsentAcceptAllResultDTO acceptBatch(com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentAcceptBatchCommandDTO command);
+    UserConsentViewDTO revoke(com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentRevokeCommandDTO command);
     void deleteAllByUserId(UUID userId);
     
     // Queries

@@ -33,6 +33,12 @@ public class ConsentDocumentJpaEntity implements Persistable<UUID> {
         return isNew || createdAt == null;
     }
 
+    @Column(name = "company_id")
+    private UUID companyId;
+
+    @Column(name = "tenant_id")
+    private UUID tenantId;
+
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 

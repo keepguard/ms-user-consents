@@ -5,23 +5,16 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserConsentCreateCommandDTO {
+public class UserConsentRevokeCommandDTO {
     private UUID companyId;
     private UUID tenantId;
     private UUID userId;
-    private String email;
     private UUID consentDocumentId;
-    private Integer version;
-    private LocalDateTime acceptedAt;
-    private String ipAddress;
-    private String userAgent;
-    private String geolocation;
+    private String reason;
 }
-

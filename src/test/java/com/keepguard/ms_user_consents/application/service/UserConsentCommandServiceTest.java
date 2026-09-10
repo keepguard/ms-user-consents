@@ -372,5 +372,64 @@ class UserConsentCommandServiceTest {
         verify(metricsPort).incrementCounter(eq("user_consent_accepted_batch_total"), any());
         verify(metricsPort, never()).incrementCounter(eq("user_consent_ignored_batch_total"), any());
     }
+
+    @Test
+    @DisplayName("Deve revogar consentimento opcional com sucesso")
+    void shouldRevokeOptionalConsentSuccessfully() {
+        // Given
+        UUID docId = UUID.randomUUID();
+        ConsentDocument doc = ConsentDocument.fromJpa(docId, "Marketing", "Desc", 1,
+                ConsentDocumentStatus.PUBLISHED, ConsentType.MARKETING_EMAIL, LocalDateTime.now(),
+                LocalDateTime.now(), "admin", "admin", null, null, null, null);
+
+        UserConsent activeConsent = UserConsent.accept(userId, "user@example.com", docId, 1,
+                LocalDateTime.now(), "192.168.1.1", "Mozilla/5.0", null);
+
+        when(consentDocumentRepositoryPort.findById(docId)).thenReturn(java.util.Optional.of(doc));
+        when(repositoryPort.findLatestByUserIdAndConsentDocumentId(userId, docId))
+                .thenReturn(java.util.Optional.of(activeConsent));
+        when(repositoryPort.save(any(UserConsent.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentRevokeCommandDTO revokeCmd =
+                com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentRevokeCommandDTO.builder()
+                        .userId(userId)
+                        .consentDocumentId(docId)
+                        .reason("Não desejo mais receber marketing")
+                        .build();
+
+        // When
+        UserConsent revoked = service.revoke(revokeCmd);
+
+        // Then
+        assertNotNull(revoked);
+        assertEquals(com.keepguard.ms_user_consents.domain.enums.UserConsentStatus.REVOKED, revoked.getStatus());
+        assertNotNull(revoked.getRevokedAt());
+        assertEquals("Não desejo mais receber marketing", revoked.getRevocationReason());
+        verify(repositoryPort).save(any(UserConsent.class));
+        verify(metricsPort).incrementCounter(eq("user_consent_revoked_total"), any());
+    }
+
+    @Test
+    @DisplayName("Deve falhar ao tentar revogar documento obrigatório")
+    void shouldFailWhenRevokingMandatoryDocument() {
+        // Given
+        UUID docId = UUID.randomUUID();
+        ConsentDocument mandatoryDoc = ConsentDocument.fromJpa(docId, "Termos", "Desc", 1,
+                ConsentDocumentStatus.PUBLISHED, ConsentType.TERMS_OF_USE, LocalDateTime.now(),
+                LocalDateTime.now(), "admin", "admin", null, null, null, null);
+
+        when(consentDocumentRepositoryPort.findById(docId)).thenReturn(java.util.Optional.of(mandatoryDoc));
+
+        com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentRevokeCommandDTO revokeCmd =
+                com.keepguard.ms_user_consents.application.dto.userConsent.UserConsentRevokeCommandDTO.builder()
+                        .userId(userId)
+                        .consentDocumentId(docId)
+                        .reason("Tentando revogar termos obrigatórios")
+                        .build();
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> service.revoke(revokeCmd));
+        verify(repositoryPort, never()).save(any());
+    }
 }
 

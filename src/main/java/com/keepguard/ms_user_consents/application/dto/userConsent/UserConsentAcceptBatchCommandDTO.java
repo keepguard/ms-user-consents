@@ -15,6 +15,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UserConsentAcceptBatchCommandDTO {
 
+    private UUID companyId;
+    private UUID tenantId;
     private UUID userId;
     private String email;
     private LocalDateTime acceptedAt;

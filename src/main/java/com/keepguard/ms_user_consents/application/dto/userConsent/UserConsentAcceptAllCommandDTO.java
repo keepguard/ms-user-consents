@@ -14,6 +14,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UserConsentAcceptAllCommandDTO {
     
+    private UUID companyId;
+    private UUID tenantId;
     private UUID userId;
     private String email;
     private LocalDateTime acceptedAt;
