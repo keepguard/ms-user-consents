@@ -103,6 +103,8 @@ management:
         include: health,info,prometheus
   endpoint:
     health:
+      probes:
+        enabled: true
       show-details: always
   prometheus:
     metrics:
